@@ -1,0 +1,21 @@
+name: Auto Merge Workflow
+
+on:
+  push:
+    branches:
+      - "feature/**"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Create and Merge Pull Request
+        uses: ./
+        with:
+          owner: "mtuktarov"
+          repo: "gha"
+          headBranch: "test"
+          baseBranch: "main"
