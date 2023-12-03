@@ -1,21 +1,26 @@
 name: Auto Merge Workflow
 
 on:
-  push:
+  pull_request:
     branches:
-      - "feature/**"
+      - "*"
 
+env:
+  GH_TOKEN: ${{ secrets.GH_TOKEN }}
+  AUTOMERGE_BRANCHES: "master,release,develop"
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GH_TOKEN }}
 
       - name: Create and Merge Pull Request
         uses: ./
         with:
-          owner: "mtuktarov"
-          repo: "gha"
-          headBranch: "test"
-          baseBranch: "main"
+          owner_repo: ${{ github.repository }}
+          head: "feature/1"
+          base: "main"
