@@ -361,7 +361,9 @@ const getAutomaticPRConfig = (head, base, author, onSuccess) => {
             .trim()} ${Date.now()}`,
         body: `Triggered by ${onSuccess ? 'successful' : 'failed'} [PR ${
             PULL_REQUEST.number
-        }](${PULL_REQUEST.html_url}) merge. Authored by ${author}\n\n${prBody}`,
+        }](${PULL_REQUEST.html_url}) merge. Authored by ${author}\n\n${
+            prBody || ''
+        }`,
         author,
     }
 }
