@@ -150,7 +150,7 @@ async function createPullRequest(base, head) {
         const authors = (await getPullRequestUsers(PULL_REQUEST.number))
             .concat([author])
             .filter((v, i, arr) => i !== arr.indexOf(v))
-        if (prUsers.length > 0) {
+        if (authors.length > 0) {
             await assignPullRequest(prOnFailureNum, authors)
         } else {
             console.log('Authors could not be found. PR will not be assigned.')
