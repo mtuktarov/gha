@@ -90,24 +90,6 @@ async function createBranch(branchName, baseBranch) {
     // }
 }
 
-async function createPR(base, head, author, onSuccess) {
-    return await axios.post(
-        `https://api.github.com/repos/${OWNER_REPO}/pulls`,
-        {
-            ...getAutomaticPRConfig(head, base, author, onSuccess),
-            head: head,
-            base: base,
-            maintainer_can_modify: true,
-        },
-        {
-            headers: {
-                Authorization: `token ${process.env.GH_TOKEN}`,
-                Accept: 'application/json',
-                'Content-Type': 'application/json',
-            },
-        }
-    )
-}
 const getAutomaticPRConfig = (head, base, author, onSuccess) => {
     let title = PULL_REQUEST.title
     let body = PULL_REQUEST.body
@@ -130,6 +112,25 @@ const getAutomaticPRConfig = (head, base, author, onSuccess) => {
             }) merge. Authored by ${author}\n\n${body}`,
         }
     }
+}
+
+async function createPR(base, head, author, onSuccess) {
+    return await axios.post(
+        `https://api.github.com/repos/${OWNER_REPO}/pulls`,
+        {
+            ...getAutomaticPRConfig(head, base, author, onSuccess),
+            head: head,
+            base: base,
+            maintainer_can_modify: true,
+        },
+        {
+            headers: {
+                Authorization: `token ${process.env.GH_TOKEN}`,
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+            },
+        }
+    )
 }
 async function createPullRequest(base, head) {
     let author = PULL_REQUEST.user.login
@@ -158,7 +159,7 @@ async function createPullRequest(base, head) {
         console.log(`PR ${prNumber} has merge conflicts`)
         const newBranchName = `conflict-resolution-${author}-${base}-${head}-${Date.now()}`
         await createBranchFrom(base, newBranchName)
-        const prOnFailureNum = await createPR(
+        const responseOnFailure = await createPR(
             newBranchName,
             head,
             author,
@@ -238,6 +239,10 @@ const assignPullRequest = async (assignees) => {
     )
     // }
 }
+
+
+
+
 
 const closePullRequest = async (prNumber) => {
     // try {
