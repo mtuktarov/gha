@@ -158,9 +158,8 @@ async function createPullRequest(base, head) {
         await createBranchFrom(base, newBranchName)
         const responseOnFailure = await createPR(
             base,
-            newBranchName,
-            author,
-            base
+            'conflict-resolution-develop-new',
+            author
         )
         const prOnFailureNum = responseOnFailure.data.number
         await closePullRequest(prNumber)
