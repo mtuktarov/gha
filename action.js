@@ -108,18 +108,36 @@ async function createPR(base, head, author, onSuccess) {
         }
     )
 }
-
-async function createPullRequest(base, head) {
-    let author
-    if (PULL_REQUEST.title.includes('AUTOMERGE')) {
-        const authorString = PULL_REQUEST.title.split('\n').at(0)
-        const authorIndex = authorString.indexOf('Authored by')
-        author = authorString.substr(authorIndex).split(' ').at(-1)
+const getAutomaticPRConfig = (head, base, author, onSuccess) => {
+    let title = PULL_REQUEST.title
+    let body = PULL_REQUEST.body
+    if (PULL_REQUEST.title.includes('[AUTOMERGE]')) {
+        const regexTitle = /\[AUTOMERGE[^\]]*\]\s*\[[^\]]+]\s*\[[^\]]+]\s*(.+)/
+        const matchTitle = regexTitle.exec(PULL_REQUEST.title)
+        const regexBody = /.+Authored\s+by\s+(\w+)\s+([\s\S]*)/
+        const matchBody = regexBody.exec(PULL_REQUEST.body)
+        const title = matchTitle[1]
+        const body = matchBody[1]
     } else {
-        author = PULL_REQUEST.user.login
+        return {
+            title: `[${
+                onSuccess ? 'AUTOMERGE' : 'AUTOMERGE_FAILED'
+            }][${head} -> ${base}][${Date.now()}] ${title}`,
+            body: `Triggered by ${onSuccess ? 'successful' : 'failed'} [PR ${
+                PULL_REQUEST.number
+            }](${
+                PULL_REQUEST.html_url
+            }) merge. Authored by ${author}\n\n${body}`,
+        }
     }
-    // try {
-
+}
+async function createPullRequest(base, head) {
+    let author = PULL_REQUEST.user.login
+    if (PULL_REQUEST.title.includes('AUTOMERGE')) {
+        const regex = /.+Authored\s+by\s+(\w+)\s+([\s\S]*)/
+        const match = regex.exec(PULL_REQUEST.body)
+        author = match[1]
+    }
     const response = await createPR(base, head, author, true)
     // console.log(`response: ${response.data.number}`)
     const prNumber = response.data.number
@@ -348,22 +366,6 @@ async function mergePullRequest() {
     //     handleCatch('Error merging pull request:', error)
     //     throw ('Error merging pull request:', error)
     // }
-}
-const getAutomaticPRConfig = (head, base, author, onSuccess) => {
-    const prBody = PULL_REQUEST.title.includes('AUTOMERGE')
-        ? PULL_REQUEST.body.split('\n').slice(0)
-        : PULL_REQUEST.body
-    return {
-        title: `[${
-            onSuccess ? 'AUTOMERGE' : 'AUTOMERGE_FAILED'
-        }] [${head} => ${base}] ${PULL_REQUEST.title.split(']').at(-1).trim()}`,
-        body: `Triggered by ${onSuccess ? 'successful' : 'failed'} [PR ${
-            PULL_REQUEST.number
-        }](${PULL_REQUEST.html_url}) merge. Authored by ${author}\n\n${
-            prBody || ''
-        }`,
-        author,
-    }
 }
 
 const getNextBranchForPR = (currentBranch, allBranches) => {
