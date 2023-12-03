@@ -137,7 +137,7 @@ async function createPullRequest(base, head) {
     // in order ro resolve conflicts
     if (pr.data.mergeable === false || pr.data.mergeable_state === 'dirty') {
         console.log(`PR ${prNumber} has merge conflicts`)
-        const newBranchName = `conflict-resolution-${author}-${base}-${head}`
+        const newBranchName = `conflict-resolution-${author}-${base}-${head}-${Date.now()}`
         await createBranchFrom(base, newBranchName)
         const prOnFailureNum = await createPR(
             newBranchName,
@@ -349,17 +349,19 @@ async function mergePullRequest() {
     // }
 }
 const getAutomaticPRConfig = (head, base, author, onSuccess) => {
+    const prBody = labels.includes(AUTOMERGE_LABEL)
+        ? PULL_REQUEST.body.split('\n').slice(1)
+        : PULL_REQUEST.body
     return {
         title: `[${
             onSuccess ? 'AUTOMERGE' : 'AUTOMERGE_FAILED'
-        }] [${head} => ${base}] ${PULL_REQUEST.title.split(']').at(-1).trim()}`,
+        }] [${head} => ${base}] ${PULL_REQUEST.title
+            .split(']')
+            .at(-1)
+            .trim()} ${Date.now()}`,
         body: `Triggered by ${onSuccess ? 'successful' : 'failed'} [PR ${
             PULL_REQUEST.number
-        }](${
-            PULL_REQUEST.html_url
-        }) merge. Authored by ${author}\n\n${PULL_REQUEST.body
-            .split('\n')
-            .slice(2)}`,
+        }](${PULL_REQUEST.html_url}) merge. Authored by ${author}\n\n${prBody}`,
         author,
     }
 }
