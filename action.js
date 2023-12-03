@@ -20,6 +20,10 @@ const githubAxios = axios.create({
         Accept: 'application/vnd.github.v3+json',
     },
 })
+
+
+
+
 const PULL_REQUEST = github.context.payload.pull_request
 const AUTOMERGE_BRANCHES = process.env.AUTOMERGE_BRANCHES
 const AUTOMERGE_LABEL = 'automerge'
