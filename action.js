@@ -90,10 +90,8 @@ async function createBranch(branchName, baseBranch) {
     // }
 }
 
-async function createPullRequest(base, head, onSuccess, labels = undefined) {
-    // try {
-
-    const response = await axios.post(
+async function createPR(base, head, onSuccess) {
+    return await axios.post(
         `https://api.github.com/repos/${OWNER_REPO}/pulls`,
         {
             ...getAutomaticPRConfig(head, base, onSuccess),
@@ -109,21 +107,45 @@ async function createPullRequest(base, head, onSuccess, labels = undefined) {
             },
         }
     )
+}
 
+async function createPullRequest(base, head) {
+    // try {
+
+    const response = await createPR(base, head, true)
     // console.log(`response: ${response.data.number}`)
     const prNumber = response.data.number
-    if (labels?.length > 0) {
-        await githubAxios.post(
-            `/repos/${OWNER_REPO}/issues/${prNumber}/labels`,
-            {
-                labels,
-            }
-        )
-    }
-    await new Promise((resolve) => setTimeout(resolve, 10000))
+
+    await githubAxios.post(`/repos/${OWNER_REPO}/issues/${prNumber}/labels`, {
+        labels: [AUTOMERGE_LABEL],
+    })
+
+    await new Promise((resolve) => setTimeout(resolve, 5000))
     console.log('Pull request created:', response.data.html_url)
-    // await checkMergeability(prNumber, head, base)
+
+    const pr = await githubAxios.get(`/repos/${OWNER_REPO}/pulls/${prNumber}`)
+
+    // if conflicts then we close created PR and open a new one
+    // with original feature branch merging into a new branch created from target branch
+    // in order ro resolve conflicts
+    if (pr.data.mergeable === false || pr.data.mergeable_state === 'dirty') {
+        console.log(`PR ${prNumber} has merge conflicts`)
+        const newBranchName = `conflict-resolution-${base}-${Date.now()}`
+        await createBranchFrom(base, newBranchName)
+        const prOnFailureNum = await createPR(newBranchName, head, false)
+        await closePullRequest(prNumber)
+        const prUsers = await getPullRequestUsers(PULL_REQUEST.head.sha)
+        if (authors.length > 0) {
+            await assignPullRequest(prOnFailureNum, prUsers)
+        } else {
+            console.log('Authors could not be found. PR will not be assigned.')
+        }
+        return prOnFailureNum
+    }
     return prNumber
+
+    // await isMergeable(head, base)
+    // return prNumber
     // } catch (error) {
     //     handleCatch('Error creating pull request:', error)
     //     throw ('Error creating pull request:', error)
@@ -200,41 +222,37 @@ const closePullRequest = async (prNumber) => {
     // }
 }
 
-const isMergeable = async (prNumber, head, base) => {
-    // try {
-    // Wait for GitHub to calculate mergeability
-    await new Promise((resolve) => setTimeout(resolve, 3000))
+// const isMergeable = async (head, base) => {
+//     // try {
+//     // Wait for GitHub to calculate mergeability
+//     const pr = await githubAxios.get(`/repos/${OWNER_REPO}/pulls/${prNumber}`)
+//     if (pr.data.mergeable === false || pr.data.mergeable_state === 'dirty') {
+//         console.log(`PR ${PULL_REQUEST.number} has merge conflicts`)
+//         const newBranchName = `conflict-resolution-${base}-${Date.now()}`
+//         await createBranchFrom(base, newBranchName)
 
-    const pr = await githubAxios.get(`/repos/${OWNER_REPO}/pulls/${prNumber}`)
-    if (pr.data.mergeable === false) {
-        console.log(`PR has merge conflicts: ${prNumber}`)
-        const newBranchName = `conflict-resolution-${base}-${Date.now()}`
-        await createBranchFrom(base, newBranchName)
-
-        const prFailureNumber = await createPullRequest(
-            newBranchName,
-            head,
-            false
-        )
-        await closePullRequest(prFailureNumber)
-        const prUsers = await getPullRequestUsers(head)
-        if (authors.length > 0) {
-            await assignPullRequest(prFailureNumber, prUsers)
-        } else {
-            console.log('Authors could not be found. PR will not be assigned.')
-        }
-        return false
-    }
-    return true
-    // } catch (error) {
-    //     console.error('Error checking PR mergeability:', error)
-    // }
-
-
-    
-}
+//         const prOnFailureNum = await createPullRequest(
+//             newBranchName,
+//             head,
+//             false
+//         )
+//         await closePullRequest(PULL_REQUEST.number)
+//         const prUsers = await getPullRequestUsers(PULL_REQUEST.head.sha)
+//         if (authors.length > 0) {
+//             await assignPullRequest(prOnFailureNum, prUsers)
+//         } else {
+//             console.log('Authors could not be found. PR will not be assigned.')
+//         }
+//         return false
+//     }
+//     return true
+//     // } catch (error) {
+//     //     console.error('Error checking PR mergeability:', error)
+//     // }
+// }
 
 async function isPullRequestReadyToMerge(pullNumber) {
+    return true
     // try {
     // Get pull request information
     const prResponse = await githubAxios.get(
@@ -295,10 +313,10 @@ async function isPullRequestReadyToMerge(pullNumber) {
     // }
 }
 
-async function mergePullRequest(head, base) {
+async function mergePullRequest() {
     // try {
     // await isPullRequestReadyToMerge(PULL_REQUEST.number)
-    if (await isMergeable(PULL_REQUEST.number, head, base)) {
+    if (await isPullRequestReadyToMerge(PULL_REQUEST.number)) {
         const mergeResponse = await githubAxios.put(
             `/repos/${OWNER_REPO}/pulls/${PULL_REQUEST.number}/merge`,
             {
@@ -312,7 +330,9 @@ async function mergePullRequest(head, base) {
         } else {
             console.error('Failed to merge PR:', mergeResponse.data)
         }
+        return mergeResponse
     }
+    return null
     // } catch (error) {
     //     handleCatch('Error merging pull request:', error)
     //     throw ('Error merging pull request:', error)
@@ -344,23 +364,23 @@ const getNextBranchForPR = (currentBranch, allBranches) => {
         ? PULL_REQUEST.labels.map((label) => label.name)
         : []
     if (labels.includes(AUTOMERGE_LABEL)) {
-        const prMergeResult = await mergePullRequest(
-            PULL_REQUEST.head.ref,
-            PULL_REQUEST.base.ref
-        )
-        const nextBranch = getNextBranchForPR(
-            PULL_REQUEST.base.ref,
-            AUTOMERGE_BRANCHES
-        )
-        // If you want to delete the branch after merging
-        ;('Pull request was created ')
+        const prMergeResult = await mergePullRequest()
+        if (prMergeResult) {
+            const nextBranch = getNextBranchForPR(
+                PULL_REQUEST.base.ref,
+                AUTOMERGE_BRANCHES
+            )
+            // If you want to delete the branch after merging
+            ;('Pull request was created ')
 
-        if (nextBranch === null) {
-            await deleteBranch(sourceBranch)
-        } else {
-            await createPullRequest(nextBranch, sourceBranch, true, [
-                AUTOMERGE_LABEL,
-            ])
+            if (nextBranch === null) {
+                await deleteBranch(sourceBranch)
+            } else {
+                const pullRequest = await createPullRequest(
+                    nextBranch,
+                    sourceBranch
+                )
+            }
         }
     } else {
         console.log('PR does not have the automerge label. Skipping action.')
