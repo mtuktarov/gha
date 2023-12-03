@@ -252,7 +252,7 @@ const closePullRequest = async (prNumber) => {
 // }
 
 async function isPullRequestReadyToMerge(pullNumber) {
-    return true
+    // return true
     // try {
     // Get pull request information
     const prResponse = await githubAxios.get(
