@@ -155,8 +155,7 @@ async function createPullRequest(base, head) {
     if (pr.data.mergeable === false || pr.data.mergeable_state === 'dirty') {
         console.log(`PR ${prNumber} has merge conflicts`)
         const newBranchName = `conflict-resolution-${base}-${head}`
-        const branchRef = await createBranchFrom(base, newBranchName)
-        await createEmptyCommitOnNewBranch(branchRef)
+        await createBranchFrom(base, newBranchName)
         const responseOnFailure = await createPR(base, newBranchName, author)
 
         const prOnFailureNum = responseOnFailure.data.number
