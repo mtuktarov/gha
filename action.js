@@ -122,7 +122,7 @@ async function createPullRequest(base, head, onSuccess, labels = undefined) {
     }
     await new Promise((resolve) => setTimeout(resolve, 10000))
     console.log('Pull request created:', response.data.html_url)
-    await checkMergeability(prNumber, head, base)
+    // await checkMergeability(prNumber, head, base)
     return prNumber
     // } catch (error) {
     //     handleCatch('Error creating pull request:', error)
@@ -200,7 +200,7 @@ const closePullRequest = async (prNumber) => {
     // }
 }
 
-const checkMergeability = async (prNumber, head, base) => {
+const isMergeable = async (prNumber, head, base) => {
     // try {
     // Wait for GitHub to calculate mergeability
     await new Promise((resolve) => setTimeout(resolve, 3000))
@@ -220,8 +220,10 @@ const checkMergeability = async (prNumber, head, base) => {
         } else {
             console.log('Authors could not be found. PR will not be assigned.')
         }
+        return false
     } else {
         console.log(`PR is mergeable: ${prFailureNumber}`)
+        return true
     }
     // } catch (error) {
     //     console.error('Error checking PR mergeability:', error)
@@ -292,23 +294,20 @@ async function isPullRequestReadyToMerge(pullNumber) {
 async function mergePullRequest(head, base) {
     // try {
     // await isPullRequestReadyToMerge(PULL_REQUEST.number)
-    const mergeability = await checkMergeability(
-        PULL_REQUEST.number,
-        head,
-        base
-    )
-    const mergeResponse = await githubAxios.put(
-        `/repos/${OWNER_REPO}/pulls/${PULL_REQUEST.number}/merge`,
-        {
-            commit_title: `Automerge PR #${PULL_REQUEST.number}`,
-            commit_message: 'Automatically merged by GitHub Actions',
-            merge_method: 'merge',
+    if (await isMergeable(PULL_REQUEST.number, head, base)) {
+        const mergeResponse = await githubAxios.put(
+            `/repos/${OWNER_REPO}/pulls/${PULL_REQUEST.number}/merge`,
+            {
+                commit_title: `Automerge PR #${PULL_REQUEST.number}`,
+                commit_message: 'Automatically merged by GitHub Actions',
+                merge_method: 'merge',
+            }
+        )
+        if (mergeResponse.status === 200) {
+            console.log(`Successfully merged PR #${PULL_REQUEST.number}`)
+        } else {
+            console.error('Failed to merge PR:', mergeResponse.data)
         }
-    )
-    if (mergeResponse.status === 200) {
-        console.log(`Successfully merged PR #${PULL_REQUEST.number}`)
-    } else {
-        console.error('Failed to merge PR:', mergeResponse.data)
     }
     // } catch (error) {
     //     handleCatch('Error merging pull request:', error)
