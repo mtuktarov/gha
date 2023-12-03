@@ -17,7 +17,7 @@ const githubAxios = axios.create({
     baseURL: 'https://api.github.com/',
     headers: {
         Authorization: `token ${process.env.GH_TOKEN}`,
-        Accept: 'application/vnd.github.v3+json',
+        Accept: 'application/json',
     },
 })
 
@@ -116,8 +116,8 @@ const getAutomaticPRConfig = (head, base, author, onSuccess) => {
         const matchTitle = regexTitle.exec(PULL_REQUEST.title)
         const regexBody = /.+Authored\s+by\s+(\w+)\s+([\s\S]*)/
         const matchBody = regexBody.exec(PULL_REQUEST.body)
-        const title = matchTitle[1]
-        const body = matchBody[1]
+        title = matchTitle[1]
+        body = matchBody[1]
     } else {
         return {
             title: `[${
