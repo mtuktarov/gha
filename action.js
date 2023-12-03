@@ -146,8 +146,8 @@ async function createPullRequest(base, head) {
             false
         )
         await closePullRequest(prNumber)
-        const authors = author
-            .concat(await getPullRequestUsers(PULL_REQUEST.number))
+        const authors = (await getPullRequestUsers(PULL_REQUEST.number))
+            .concat([author])
             .filter((v, i, arr) => i !== arr.indexOf(v))
         if (prUsers.length > 0) {
             await assignPullRequest(prOnFailureNum, authors)
