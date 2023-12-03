@@ -102,9 +102,7 @@ const getAutomaticPRConfig = (head, base, author, failedBranch = undefined) => {
         body = matchBody[2]
     }
     return {
-        title: `[automerge][${head} -> ${
-            failedBranch ? base : ''
-        }][${Math.floor(Date.now() / 60000)}]${
+        title: `[automerge][${head} -> ${failedBranch ? failedBranch : base}]${
             failedBranch ? ' FAILED ' : ''
         } ${title}`,
         body: `Triggered by [PR ${PULL_REQUEST.number}](${PULL_REQUEST.html_url}) merge. Authored by ${author}\n\n${body}`,
@@ -112,10 +110,12 @@ const getAutomaticPRConfig = (head, base, author, failedBranch = undefined) => {
 }
 
 async function createPR(base, head, author, failedBranch = undefined) {
+    const titleBody = getAutomaticPRConfig(head, base, author, failedBranch)
+    console.log(`getAutomaticPRConfig: ${titleBody}`)
     return await axios.post(
         `https://api.github.com/repos/${OWNER_REPO}/pulls`,
         {
-            ...getAutomaticPRConfig(head, base, author, failedBranch),
+            ...titleBody,
             head: head,
             base: base,
             maintainer_can_modify: true,
