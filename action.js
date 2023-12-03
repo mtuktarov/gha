@@ -94,17 +94,19 @@ const getAutomaticPRConfig = (head, base, author, failedBranch = undefined) => {
     let title = PULL_REQUEST.title
     let body = PULL_REQUEST.body
     if (PULL_REQUEST.title.includes('[AUTOMERGE]')) {
-        const regexTitle = /\[AUTOMERGE[^\]]*\]\s*\[[^\]]+]\s*\[[^\]]+]\s*(.+)/
+        const regexTitle = /\[automerge[^\]]*\]\s*\[[^\]]+]\s*\[[^\]]+]\s*(.+)/
         const matchTitle = regexTitle.exec(PULL_REQUEST.title)
         const regexBody = /.+Authored\s+by\s+(\w+)\s+([\s\S]*)/
         const matchBody = regexBody.exec(PULL_REQUEST.body)
         title = matchTitle[1]
-        body = matchBody[1]
+        body = matchBody[2]
     }
     return {
-        title: `[automerge][${head} -> ${failedBranch ?? base}][${Math.floor(
-            Date.now() / 60000
-        )}]${failedBranch ? ' FAILED ' : ''} ${title}`,
+        title: `[automerge][${head} -> ${
+            failedBranch ? base : ''
+        }][${Math.floor(Date.now() / 60000)}]${
+            failedBranch ? ' FAILED ' : ''
+        } ${title}`,
         body: `Triggered by [PR ${PULL_REQUEST.number}](${PULL_REQUEST.html_url}) merge. Authored by ${author}\n\n${body}`,
     }
 }
