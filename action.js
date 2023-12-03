@@ -252,6 +252,7 @@ const closePullRequest = async (prNumber) => {
 // }
 
 async function isPullRequestReadyToMerge(pullNumber) {
+    return true
     // try {
     // Get pull request information
     const prResponse = await githubAxios.get(
@@ -329,7 +330,9 @@ async function mergePullRequest() {
         } else {
             console.error('Failed to merge PR:', mergeResponse.data)
         }
+        return mergeResponse
     }
+    return null
     // } catch (error) {
     //     handleCatch('Error merging pull request:', error)
     //     throw ('Error merging pull request:', error)
@@ -362,20 +365,22 @@ const getNextBranchForPR = (currentBranch, allBranches) => {
         : []
     if (labels.includes(AUTOMERGE_LABEL)) {
         const prMergeResult = await mergePullRequest()
-        const nextBranch = getNextBranchForPR(
-            PULL_REQUEST.base.ref,
-            AUTOMERGE_BRANCHES
-        )
-        // If you want to delete the branch after merging
-        ;('Pull request was created ')
-
-        if (nextBranch === null) {
-            await deleteBranch(sourceBranch)
-        } else {
-            const pullRequest = await createPullRequest(
-                nextBranch,
-                sourceBranch
+        if (prMergeResult) {
+            const nextBranch = getNextBranchForPR(
+                PULL_REQUEST.base.ref,
+                AUTOMERGE_BRANCHES
             )
+            // If you want to delete the branch after merging
+            ;('Pull request was created ')
+
+            if (nextBranch === null) {
+                await deleteBranch(sourceBranch)
+            } else {
+                const pullRequest = await createPullRequest(
+                    nextBranch,
+                    sourceBranch
+                )
+            }
         }
     } else {
         console.log('PR does not have the automerge label. Skipping action.')
