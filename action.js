@@ -155,12 +155,10 @@ async function createPullRequest(base, head) {
     if (pr.data.mergeable === false || pr.data.mergeable_state === 'dirty') {
         console.log(`PR ${prNumber} has merge conflicts`)
         const newBranchName = `conflict-resolution-${base}-${head}`
-        await createBranchFrom(base, newBranchName)
-        const responseOnFailure = await createPR(
-            base,
-            'conflict-resolution-develop-new',
-            author
-        )
+        const branchRef = await createBranchFrom(base, newBranchName)
+        await createEmptyCommitOnNewBranch(branchRef)
+        const responseOnFailure = await createPR(base, newBranchName, author)
+
         const prOnFailureNum = responseOnFailure.data.number
         await closePullRequest(prNumber)
         const authors = (await getPullRequestUsers(PULL_REQUEST.number))
@@ -200,6 +198,34 @@ const createBranchFrom = async (branchName, newBranchName) => {
     })
 
     console.log(`Branch created: ${newBranchName}`)
+
+    // Create a new tree object identical to the one pointed to by the SHA
+    const { data: treeData } = await githubAxios.post(
+        `/repos/${OWNER_REPO}/git/trees`,
+        {
+            base_tree: sha, // Use the existing SHA as the base tree
+            tree: [], // No changes, empty tree
+        }
+    )
+
+    // Create a new commit object with the same tree
+    const { data: newCommitData } = await githubAxios.post(
+        `/repos/${OWNER_REPO}/git/commits`,
+        {
+            message: 'This is an empty commit',
+            tree: treeData.sha,
+            parents: [sha], // Use the existing SHA as the parent commit
+        }
+    )
+
+    // Update the branch to point to the new empty commit
+    await githubAxios.patch(`/repos/${OWNER_REPO}/git/refs/${newBranchRef}`, {
+        sha: newCommitData.sha,
+    })
+
+    console.log('Empty commit created on the new branch:', newCommitData.sha)
+    return newCommitData.sha // SHA of the new empty commit
+
     // } catch (error) {
     //     console.error('Error creating new branch:', error)
     // }
