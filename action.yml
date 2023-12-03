@@ -14,5 +14,5 @@ inputs:
     description: "The name of the base branch"
     required: true
 runs:
-  using: "docker"
-  image: "Dockerfile"
+  using: "node20"
+  main: "action.js"
