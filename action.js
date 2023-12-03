@@ -102,7 +102,7 @@ const getAutomaticPRConfig = (head, base, author, failedBranch = undefined) => {
         body = matchBody[1]
     }
     return {
-        title: `[automerge][${head} -> ${failedBranch || base}][${Math.floor(
+        title: `[automerge][${head} -> ${failedBranch ?? base}][${Math.floor(
             Date.now() / 60000
         )}]${failedBranch ? ' FAILED ' : ''} ${title}`,
         body: `Triggered by [PR ${PULL_REQUEST.number}](${PULL_REQUEST.html_url}) merge. Authored by ${author}\n\n${body}`,
