@@ -1,11 +1,8 @@
 name: "Create and Merge Pull Request"
 description: "Creates and merges a pull request"
 inputs:
-  owner:
-    description: "Owner of the repository"
-    required: true
-  repo:
-    description: "Repository name"
+  owner_repo:
+    description: "Owner and repository name"
     required: true
   headBranch:
     description: "The name of the head branch"
