@@ -20,6 +20,7 @@ const githubAxios = axios.create({
         Accept: 'application/vnd.github.v3+json',
     },
 })
+
 const PULL_REQUEST = github.context.payload.pull_request
 const AUTOMERGE_BRANCHES = process.env.AUTOMERGE_BRANCHES
 const AUTOMERGE_LABEL = 'automerge'
@@ -288,10 +289,14 @@ async function isPullRequestReadyToMerge(pullNumber) {
     // }
 }
 
-async function mergePullRequest() {
+async function mergePullRequest(head, base) {
     // try {
     // await isPullRequestReadyToMerge(PULL_REQUEST.number)
-    const mergeability = await checkMergeability(prNumber, head, base)
+    const mergeability = await checkMergeability(
+        PULL_REQUEST.number,
+        head,
+        base
+    )
     const mergeResponse = await githubAxios.put(
         `/repos/${OWNER_REPO}/pulls/${PULL_REQUEST.number}/merge`,
         {
@@ -336,7 +341,10 @@ const getNextBranchForPR = (currentBranch, allBranches) => {
         ? PULL_REQUEST.labels.map((label) => label.name)
         : []
     if (labels.includes(AUTOMERGE_LABEL)) {
-        const prMergeResult = await mergePullRequest()
+        const prMergeResult = await mergePullRequest(
+            PULL_REQUEST.head.ref,
+            PULL_REQUEST.base.ref
+        )
         const nextBranch = getNextBranchForPR(
             PULL_REQUEST.base.ref,
             AUTOMERGE_BRANCHES
