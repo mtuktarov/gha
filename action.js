@@ -17,7 +17,7 @@ const githubAxios = axios.create({
     baseURL: 'https://api.github.com/',
     headers: {
         Authorization: `token ${process.env.GH_TOKEN}`,
-        Accept: 'application/json',
+        Accept: 'application/vnd.github.v3+json',
     },
 })
 
@@ -182,53 +182,65 @@ async function createPullRequest(base, head) {
 }
 
 const createBranchFrom = async (branchName, newBranchName) => {
+    const githubAxios = axios.create({
+        baseURL: 'https://api.github.com/',
+        headers: {
+            Authorization: `token ${process.env.GITHUB_TOKEN}`,
+            Accept: 'application/vnd.github.v3+json',
+        },
+    })
+
     const branchRef = `refs/heads/${branchName}`
-    const newBranchRef = `refs/heads/${newBranchName}`
-    // try {
-    // Get the SHA of the latest commit in the base branch
-    const branchData = await githubAxios.get(
-        `/repos/${OWNER_REPO}/git/${branchRef}`
-    )
-    const sha = branchData.data.object.sha
 
-    // Create the new branch with the same SHA
-    await githubAxios.post(`/repos/${OWNER_REPO}/git/refs`, {
-        ref: newBranchRef,
-        sha: sha,
-    })
+    try {
+        // Get the commit SHA of the existing branch
+        const branchData = await githubAxios.get(
+            `/repos/${OWNER_REPO}/git/${branchRef}`
+        )
+        const sha = branchData.data.object.sha
 
-    console.log(`Branch created: ${newBranchName}`)
+        // Create a new branch reference pointing to the same commit SHA
+        await githubAxios.post(`/repos/${OWNER_REPO}/git/refs`, {
+            ref: `refs/heads/${newBranchName}`,
+            sha: sha,
+        })
 
-    // Create a new tree object identical to the one pointed to by the SHA
-    const { data: treeData } = await githubAxios.post(
-        `/repos/${OWNER_REPO}/git/trees`,
-        {
-            base_tree: sha, // Use the existing SHA as the base tree
-            tree: [], // No changes, empty tree
+        console.log(`Branch created: ${newBranchName}`)
+
+        // Get the tree SHA using the commit SHA
+        const commitData = await githubAxios.get(
+            `/repos/${OWNER_REPO}/git/commits/${sha}`
+        )
+        const treeSha = commitData.data.tree.sha
+
+        // Create a new commit using the tree SHA
+        const newCommitData = await githubAxios.post(
+            `/repos/${OWNER_REPO}/git/commits`,
+            {
+                message: 'This is an empty commit',
+                tree: treeSha,
+                parents: [sha],
+            }
+        )
+
+        // Update the branch to point to the new commit
+        await githubAxios.patch(
+            `/repos/${OWNER_REPO}/git/refs/heads/${newBranchName}`,
+            {
+                sha: newCommitData.data.sha,
+            }
+        )
+
+        console.log(
+            `Empty commit created on the new branch: ${newCommitData.data.sha}`
+        )
+    } catch (error) {
+        console.error(`Error: ${error.message}`)
+        console.log('Request Config:', error.config)
+        if (error.response) {
+            console.log('Error Response:', error.response.data)
         }
-    )
-
-    // Create a new commit object with the same tree
-    const { data: newCommitData } = await githubAxios.post(
-        `/repos/${OWNER_REPO}/git/commits`,
-        {
-            message: 'This is an empty commit',
-            tree: treeData.sha,
-            parents: [sha], // Use the existing SHA as the parent commit
-        }
-    )
-
-    // Update the branch to point to the new empty commit
-    await githubAxios.patch(`/repos/${OWNER_REPO}/git/refs/${newBranchRef}`, {
-        sha: newCommitData.sha,
-    })
-
-    console.log('Empty commit created on the new branch:', newCommitData.sha)
-    return newCommitData.sha // SHA of the new empty commit
-
-    // } catch (error) {
-    //     console.error('Error creating new branch:', error)
-    // }
+    }
 }
 
 const getPullRequestUsers = async (prNumber) => {
