@@ -90,11 +90,11 @@ async function createBranch(branchName, baseBranch) {
     // }
 }
 
-async function createPR(base, head, onSuccess) {
+async function createPR(base, head, author, onSuccess) {
     return await axios.post(
         `https://api.github.com/repos/${OWNER_REPO}/pulls`,
         {
-            ...getAutomaticPRConfig(head, base, onSuccess),
+            ...getAutomaticPRConfig(head, base, author, onSuccess),
             head: head,
             base: base,
             maintainer_can_modify: true,
@@ -110,9 +110,16 @@ async function createPR(base, head, onSuccess) {
 }
 
 async function createPullRequest(base, head) {
+    let author
+    if (PULL_REQUEST.title.include(AUTOMERGE)) {
+        const authorIndex = string.indexOf('Authored by')
+        author = string.substr(authorIndex).split(' ').at(-1)
+    } else {
+        author = PULL_REQUEST.user.login
+    }
     // try {
 
-    const response = await createPR(base, head, true)
+    const response = await createPR(base, head, author, true)
     // console.log(`response: ${response.data.number}`)
     const prNumber = response.data.number
 
@@ -130,13 +137,20 @@ async function createPullRequest(base, head) {
     // in order ro resolve conflicts
     if (pr.data.mergeable === false || pr.data.mergeable_state === 'dirty') {
         console.log(`PR ${prNumber} has merge conflicts`)
-        const newBranchName = `conflict-resolution-${base}-${Date.now()}`
+        const newBranchName = `conflict-resolution-${author}-${base}-${head}`
         await createBranchFrom(base, newBranchName)
-        const prOnFailureNum = await createPR(newBranchName, head, false)
+        const prOnFailureNum = await createPR(
+            newBranchName,
+            head,
+            author,
+            false
+        )
         await closePullRequest(prNumber)
-        const prUsers = await getPullRequestUsers(PULL_REQUEST.number)
+        const authors = author
+            .concat(await getPullRequestUsers(PULL_REQUEST.number))
+            .filter((v, i, arr) => i !== arr.indexOf(v))
         if (prUsers.length > 0) {
-            await assignPullRequest(prOnFailureNum, prUsers)
+            await assignPullRequest(prOnFailureNum, authors)
         } else {
             console.log('Authors could not be found. PR will not be assigned.')
         }
@@ -180,18 +194,8 @@ const getPullRequestUsers = async (prNumber) => {
     const commitsResponse = await githubAxios.get(
         `/repos/${OWNER_REPO}/pulls/${prNumber}/commits`
     )
-
-    const latestCommits = commitsResponse.data
     // Extract the author's GitHub username
-    console.log(
-        `latestCommits: ${latestCommits.map((commit) => commit.author.login)}`
-    )
-    console.log(`user: ${PULL_REQUEST.user}`)
-
-    const authors = latestCommits
-        .map((commit) => commit.author.login)
-        .concat([PULL_REQUEST.merged_by, PULL_REQUEST.user])
-        .filter((v, i, arr) => i !== arr.indexOf(v))
+    const authors = commitsResponse.data.map((commit) => commit.author.login)
     console.log(`authors: ${authors}`)
 
     return authors
@@ -344,18 +348,18 @@ async function mergePullRequest() {
     //     throw ('Error merging pull request:', error)
     // }
 }
-const getAutomaticPRConfig = (head, base, onSuccess) => {
+const getAutomaticPRConfig = (head, base, author, onSuccess) => {
     return {
         title: `[${
             onSuccess ? 'AUTOMERGE' : 'AUTOMERGE_FAILED'
         }] [${head} => ${base}] ${PULL_REQUEST.title.split(']').at(-1).trim()}`,
         body: `Triggered by ${onSuccess ? 'successful' : 'failed'} [PR ${
             PULL_REQUEST.number
-        }](${PULL_REQUEST.html_url}) merge. Authored by ${
-            PULL_REQUEST.user.login
-        }`,
+        }](${PULL_REQUEST.html_url}) merge. Authored by ${author}`,
+        author,
     }
 }
+
 const getNextBranchForPR = (currentBranch, allBranches) => {
     const branchesArray = allBranches.split(',')
     const currentIndex = branchesArray.indexOf(currentBranch)
@@ -369,6 +373,7 @@ const getNextBranchForPR = (currentBranch, allBranches) => {
     const labels = PULL_REQUEST
         ? PULL_REQUEST.labels.map((label) => label.name)
         : []
+
     if (labels.includes(AUTOMERGE_LABEL)) {
         const prMergeResult = await mergePullRequest()
         if (prMergeResult) {
