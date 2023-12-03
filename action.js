@@ -289,7 +289,7 @@ async function isPullRequestReadyToMerge(pullNumber) {
     // }
 }
 
-async function mergePullRequest() {
+async function mergePullRequest(head, base) {
     // try {
     // await isPullRequestReadyToMerge(PULL_REQUEST.number)
     const mergeability = await checkMergeability(
@@ -341,7 +341,10 @@ const getNextBranchForPR = (currentBranch, allBranches) => {
         ? PULL_REQUEST.labels.map((label) => label.name)
         : []
     if (labels.includes(AUTOMERGE_LABEL)) {
-        const prMergeResult = await mergePullRequest()
+        const prMergeResult = await mergePullRequest(
+            PULL_REQUEST.head.ref,
+            PULL_REQUEST.base.ref
+        )
         const nextBranch = getNextBranchForPR(
             PULL_REQUEST.base.ref,
             AUTOMERGE_BRANCHES
