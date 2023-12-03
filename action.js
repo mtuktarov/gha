@@ -181,13 +181,13 @@ async function createPullRequest(base, head) {
 }
 
 const createBranchFrom = async (branchName, newBranchName) => {
-    const githubAxios = axios.create({
-        baseURL: 'https://api.github.com/',
-        headers: {
-            Authorization: `token ${process.env.GITHUB_TOKEN}`,
-            Accept: 'application/vnd.github.v3+json',
-        },
-    })
+    // const githubAxios = axios.create({
+    //     baseURL: 'https://api.github.com/',
+    //     headers: {
+    //         Authorization: `token ${process.env.GITHUB_TOKEN}`,
+    //         Accept: 'application/vnd.github.v3+json',
+    //     },
+    // })
 
     const branchRef = `refs/heads/${branchName}`
 
