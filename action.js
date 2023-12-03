@@ -111,7 +111,7 @@ const getAutomaticPRConfig = (head, base, author, failedBranch = undefined) => {
 
 async function createPR(base, head, author, failedBranch = undefined) {
     const titleBody = getAutomaticPRConfig(head, base, author, failedBranch)
-    console.log(`getAutomaticPRConfig: ${titleBody}`)
+    console.log(`getAutomaticPRConfig: ${JSON.stringify(titleBody, null, 2)}`)
     return await axios.post(
         `https://api.github.com/repos/${OWNER_REPO}/pulls`,
         {
@@ -182,12 +182,6 @@ async function createPullRequest(base, head) {
     //     handleCatch('Error creating pull request:', error)
     //     throw ('Error creating pull request:', error)
     // }
-
-
-
-
-
-    
 }
 
 const createBranchFrom = async (branchName, newBranchName) => {
@@ -237,7 +231,7 @@ const assignPullRequest = async (prOnFailureNum, assignees) => {
     )
     console.log(`PR #${prOnFailureNum} assigned to ${assignees}`)
     // } catch (error) {
-    console.error(`Error assigning PR #${prOnFailureNum} to ${assignees}:`)
+    // console.error(`Error assigning PR #${prOnFailureNum} to ${assignees}:`)
     // }
 }
 
