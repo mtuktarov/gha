@@ -90,7 +90,7 @@ async function createBranch(branchName, baseBranch) {
     // }
 }
 
-const getAutomaticPRConfig = (head, base, author, failedBranch=undefined) => {
+const getAutomaticPRConfig = (head, base, author, failedBranch = undefined) => {
     let title = PULL_REQUEST.title
     let body = PULL_REQUEST.body
     if (PULL_REQUEST.title.includes('[AUTOMERGE]')) {
@@ -104,12 +104,12 @@ const getAutomaticPRConfig = (head, base, author, failedBranch=undefined) => {
     return {
         title: `[automerge][${head} -> ${failedBranch || base}][${Math.floor(
             Date.now() / 60000
-        )}]${failedBranch ? ' FAILED ': ''} ${title}`,
+        )}]${failedBranch ? ' FAILED ' : ''} ${title}`,
         body: `Triggered by [PR ${PULL_REQUEST.number}](${PULL_REQUEST.html_url}) merge. Authored by ${author}\n\n${body}`,
     }
 }
 
-async function createPR(base, head, author, failedBranch=undefined) {
+async function createPR(base, head, author, failedBranch = undefined) {
     return await axios.post(
         `https://api.github.com/repos/${OWNER_REPO}/pulls`,
         {
@@ -161,7 +161,7 @@ async function createPullRequest(base, head) {
             head,
             author,
             false,
-            failedBranch: base
+            base
         )
         const prOnFailureNum = responseOnFailure.data.number
         await closePullRequest(prNumber)
