@@ -136,7 +136,7 @@ async function createPullRequest(base, head) {
         const match = regex.exec(PULL_REQUEST.body)
         author = match[1]
     }
-    const response = await createPR(base, head, author, true)
+    const response = await createPR(base, head, author)
     // console.log(`response: ${response.data.number}`)
     const prNumber = response.data.number
 
@@ -160,7 +160,6 @@ async function createPullRequest(base, head) {
             newBranchName,
             head,
             author,
-            false,
             base
         )
         const prOnFailureNum = responseOnFailure.data.number
