@@ -229,10 +229,10 @@ const assignPullRequest = async (assignees) => {
         `/repos/${OWNER_REPO}/issues/${PULL_REQUEST.number}/assignees`,
         { assignees: assignees }
     )
-    console.log(`PR #${PULL_REQUEST.number} assigned to ${assignee}`)
+    console.log(`PR #${PULL_REQUEST.number} assigned to ${assignees}`)
     // } catch (error) {
     console.error(
-        `Error assigning PR #${PULL_REQUEST.number} to ${assignee}:`,
+        `Error assigning PR #${PULL_REQUEST.number} to ${assignees}:`,
         error
     )
     // }
