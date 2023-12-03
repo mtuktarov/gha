@@ -90,7 +90,7 @@ async function createBranch(branchName, baseBranch) {
     // }
 }
 
-const getAutomaticPRConfig = (head, base, author, onSuccess) => {
+const getAutomaticPRConfig = (head, base, author, failedBranch=undefined) => {
     let title = PULL_REQUEST.title
     let body = PULL_REQUEST.body
     if (PULL_REQUEST.title.includes('[AUTOMERGE]')) {
@@ -102,20 +102,18 @@ const getAutomaticPRConfig = (head, base, author, onSuccess) => {
         body = matchBody[1]
     }
     return {
-        title: `[${
-            onSuccess ? 'AUTOMERGE' : 'AUTOMERGE_FAILED'
-        }][${head} -> ${base}][${Date.now()}] ${title}`,
-        body: `Triggered by ${onSuccess ? 'successful' : 'failed'} [PR ${
-            PULL_REQUEST.number
-        }](${PULL_REQUEST.html_url}) merge. Authored by ${author}\n\n${body}`,
+        title: `[automerge][${head} -> ${failedBranch || base}][${Math.floor(
+            Date.now() / 60000
+        )}]${failedBranch ? ' FAILED ': ''} ${title}`,
+        body: `Triggered by [PR ${PULL_REQUEST.number}](${PULL_REQUEST.html_url}) merge. Authored by ${author}\n\n${body}`,
     }
 }
 
-async function createPR(base, head, author, onSuccess) {
+async function createPR(base, head, author, failedBranch=undefined) {
     return await axios.post(
         `https://api.github.com/repos/${OWNER_REPO}/pulls`,
         {
-            ...getAutomaticPRConfig(head, base, author, onSuccess),
+            ...getAutomaticPRConfig(head, base, author, failedBranch),
             head: head,
             base: base,
             maintainer_can_modify: true,
@@ -154,13 +152,16 @@ async function createPullRequest(base, head) {
     // in order ro resolve conflicts
     if (pr.data.mergeable === false || pr.data.mergeable_state === 'dirty') {
         console.log(`PR ${prNumber} has merge conflicts`)
-        const newBranchName = `conflict-resolution-${author}-${base}-${head}-${Date.now()}`
+        const newBranchName = `conflict-resolution-${author}-${base}-${head}-${Math.floor(
+            Date.now() / 60000
+        )}`
         await createBranchFrom(base, newBranchName)
         const responseOnFailure = await createPR(
             newBranchName,
             head,
             author,
-            false
+            false,
+            failedBranch: base
         )
         const prOnFailureNum = responseOnFailure.data.number
         await closePullRequest(prNumber)
