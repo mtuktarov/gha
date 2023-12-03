@@ -111,7 +111,7 @@ async function createPR(base, head, author, onSuccess) {
 
 async function createPullRequest(base, head) {
     let author
-    if (PULL_REQUEST.title.include('AUTOMERGE')) {
+    if (PULL_REQUEST.title.includes('AUTOMERGE')) {
         const authorIndex = string.indexOf('Authored by')
         author = string.substr(authorIndex).split(' ').at(-1)
     } else {
