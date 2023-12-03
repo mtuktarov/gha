@@ -93,7 +93,7 @@ async function createBranch(branchName, baseBranch) {
 const getAutomaticPRConfig = (head, base, author, failedBranch = undefined) => {
     let title = PULL_REQUEST.title
     let body = PULL_REQUEST.body
-    if (PULL_REQUEST.title.includes('[AUTOMERGE]')) {
+    if (PULL_REQUEST.title.includes('[automerge]')) {
         const regexTitle = /\[automerge[^\]]*\]\s*\[[^\]]+]\s*\[[^\]]+]\s*(.+)/
         const matchTitle = regexTitle.exec(PULL_REQUEST.title)
         const regexBody = /.+Authored\s+by\s+(\w+)\s+([\s\S]*)/
@@ -131,7 +131,7 @@ async function createPR(base, head, author, failedBranch = undefined) {
 }
 async function createPullRequest(base, head) {
     let author = PULL_REQUEST.user.login
-    if (PULL_REQUEST.title.includes('AUTOMERGE')) {
+    if (PULL_REQUEST.title.includes('automerge')) {
         const regex = /.+Authored\s+by\s+(\w+)\s+([\s\S]*)/
         const match = regex.exec(PULL_REQUEST.body)
         author = match[1]
@@ -154,9 +154,7 @@ async function createPullRequest(base, head) {
     // in order ro resolve conflicts
     if (pr.data.mergeable === false || pr.data.mergeable_state === 'dirty') {
         console.log(`PR ${prNumber} has merge conflicts`)
-        const newBranchName = `conflict-resolution-${author}-${base}-${head}-${Math.floor(
-            Date.now() / 60000
-        )}`
+        const newBranchName = `conflict-resolution-${base}-${head}`
         await createBranchFrom(base, newBranchName)
         const responseOnFailure = await createPR(
             newBranchName,
