@@ -156,12 +156,7 @@ async function createPullRequest(base, head) {
         console.log(`PR ${prNumber} has merge conflicts`)
         const newBranchName = `conflict-resolution-${base}-${head}`
         await createBranchFrom(base, newBranchName)
-        const responseOnFailure = await createPR(
-            base,
-            newBranchName,
-            author,
-            base
-        )
+        const responseOnFailure = await createPR(base, newBranchName, author)
         const prOnFailureNum = responseOnFailure.data.number
         await closePullRequest(prNumber)
         const authors = (await getPullRequestUsers(PULL_REQUEST.number))
