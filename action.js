@@ -146,8 +146,8 @@ async function createPullRequest(base, head) {
             false
         )
         await closePullRequest(prNumber)
-        const authors = author
-            .concat(await getPullRequestUsers(PULL_REQUEST.number))
+        const authors = (await getPullRequestUsers(PULL_REQUEST.number))
+            .concat([author])
             .filter((v, i, arr) => i !== arr.indexOf(v))
         if (prUsers.length > 0) {
             await assignPullRequest(prOnFailureNum, authors)
@@ -355,9 +355,11 @@ const getAutomaticPRConfig = (head, base, author, onSuccess) => {
         }] [${head} => ${base}] ${PULL_REQUEST.title.split(']').at(-1).trim()}`,
         body: `Triggered by ${onSuccess ? 'successful' : 'failed'} [PR ${
             PULL_REQUEST.number
-        }](${PULL_REQUEST.html_url}) merge. Authored by ${author}\n\n${
-            PULL_REQUEST.body
-        }`,
+        }](${
+            PULL_REQUEST.html_url
+        }) merge. Authored by ${author}\n\n${PULL_REQUEST.body
+            .split('\n')
+            .slice(2)}`,
         author,
     }
 }
