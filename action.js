@@ -100,17 +100,14 @@ const getAutomaticPRConfig = (head, base, author, onSuccess) => {
         const matchBody = regexBody.exec(PULL_REQUEST.body)
         title = matchTitle[1]
         body = matchBody[1]
-    } else {
-        return {
-            title: `[${
-                onSuccess ? 'AUTOMERGE' : 'AUTOMERGE_FAILED'
-            }][${head} -> ${base}][${Date.now()}] ${title}`,
-            body: `Triggered by ${onSuccess ? 'successful' : 'failed'} [PR ${
-                PULL_REQUEST.number
-            }](${
-                PULL_REQUEST.html_url
-            }) merge. Authored by ${author}\n\n${body}`,
-        }
+    }
+    return {
+        title: `[${
+            onSuccess ? 'AUTOMERGE' : 'AUTOMERGE_FAILED'
+        }][${head} -> ${base}][${Date.now()}] ${title}`,
+        body: `Triggered by ${onSuccess ? 'successful' : 'failed'} [PR ${
+            PULL_REQUEST.number
+        }](${PULL_REQUEST.html_url}) merge. Authored by ${author}\n\n${body}`,
     }
 }
 
@@ -239,10 +236,6 @@ const assignPullRequest = async (assignees) => {
     )
     // }
 }
-
-
-
-
 
 const closePullRequest = async (prNumber) => {
     // try {
