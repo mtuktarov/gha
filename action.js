@@ -206,13 +206,16 @@ const isMergeable = async (prNumber, head, base) => {
     await new Promise((resolve) => setTimeout(resolve, 3000))
 
     const pr = await githubAxios.get(`/repos/${OWNER_REPO}/pulls/${prNumber}`)
-    let prFailureNumber
     if (pr.data.mergeable === false) {
         console.log(`PR has merge conflicts: ${prNumber}`)
         const newBranchName = `conflict-resolution-${base}-${Date.now()}`
         await createBranchFrom(base, newBranchName)
 
-        prFailureNumber = await createPullRequest(newBranchName, head, false)
+        const prFailureNumber = await createPullRequest(
+            newBranchName,
+            head,
+            false
+        )
         await closePullRequest(prFailureNumber)
         const prUsers = await getPullRequestUsers(head)
         if (authors.length > 0) {
@@ -221,10 +224,8 @@ const isMergeable = async (prNumber, head, base) => {
             console.log('Authors could not be found. PR will not be assigned.')
         }
         return false
-    } else {
-        console.log(`PR is mergeable: ${prFailureNumber}`)
-        return true
     }
+    return true
     // } catch (error) {
     //     console.error('Error checking PR mergeability:', error)
     // }
