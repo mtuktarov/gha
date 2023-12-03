@@ -24,5 +24,6 @@ jobs:
         uses: ./
         with:
           owner_repo: ${{ github.repository }}
-          head: "feature/1"
-          base: "main"
+
+          # head: "feature/1"
+          # base: "main"
