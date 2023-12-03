@@ -21,9 +21,6 @@ const githubAxios = axios.create({
     },
 })
 
-
-
-
 const PULL_REQUEST = github.context.payload.pull_request
 const AUTOMERGE_BRANCHES = process.env.AUTOMERGE_BRANCHES
 const AUTOMERGE_LABEL = 'automerge'
@@ -295,7 +292,11 @@ async function isPullRequestReadyToMerge(pullNumber) {
 async function mergePullRequest() {
     // try {
     // await isPullRequestReadyToMerge(PULL_REQUEST.number)
-    const mergeability = await checkMergeability(prNumber, head, base)
+    const mergeability = await checkMergeability(
+        PULL_REQUEST.number,
+        head,
+        base
+    )
     const mergeResponse = await githubAxios.put(
         `/repos/${OWNER_REPO}/pulls/${PULL_REQUEST.number}/merge`,
         {
