@@ -162,6 +162,7 @@ async function createPullRequest(base, head) {
             author,
             false
         )
+        const prOnFailureNum = responseOnFailure.data.number
         await closePullRequest(prNumber)
         const authors = (await getPullRequestUsers(PULL_REQUEST.number))
             .concat([author])
