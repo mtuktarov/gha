@@ -351,15 +351,12 @@ async function mergePullRequest() {
 }
 const getAutomaticPRConfig = (head, base, author, onSuccess) => {
     const prBody = PULL_REQUEST.title.includes(AUTOMERGE_LABEL)
-        ? PULL_REQUEST.body.split('\n').slice(1)
+        ? PULL_REQUEST.body.split('\n').slice(0)
         : PULL_REQUEST.body
     return {
         title: `[${
             onSuccess ? 'AUTOMERGE' : 'AUTOMERGE_FAILED'
-        }] [${head} => ${base}] ${PULL_REQUEST.title
-            .split(']')
-            .at(-1)
-            .trim()} ${Date.now()}`,
+        }] [${head} => ${base}] ${PULL_REQUEST.title.split(']').at(-1).trim()}`,
         body: `Triggered by ${onSuccess ? 'successful' : 'failed'} [PR ${
             PULL_REQUEST.number
         }](${PULL_REQUEST.html_url}) merge. Authored by ${author}\n\n${
