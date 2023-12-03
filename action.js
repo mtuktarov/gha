@@ -115,14 +115,11 @@ async function createPullRequest(base, head) {
     const response = await createPR(base, head, true)
     // console.log(`response: ${response.data.number}`)
     const prNumber = response.data.number
-    if (labels?.length > 0) {
-        await githubAxios.post(
-            `/repos/${OWNER_REPO}/issues/${prNumber}/labels`,
-            {
-                labels: [AUTOMERGE_LABEL],
-            }
-        )
-    }
+
+    await githubAxios.post(`/repos/${OWNER_REPO}/issues/${prNumber}/labels`, {
+        labels: [AUTOMERGE_LABEL],
+    })
+
     await new Promise((resolve) => setTimeout(resolve, 5000))
     console.log('Pull request created:', response.data.html_url)
 
