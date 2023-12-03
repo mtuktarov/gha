@@ -2,11 +2,14 @@ name: Auto Merge Workflow
 
 on:
   pull_request:
+    types: [assigned, unassigned, labeled, unlabeled, opened, edited, closed, reopened, synchronize, ready_for_review, locked, unlocked, review_requested, review_request_removed]
     branches:
       - "*"
   issues:
     types:
       - labeled
+          
+
 env:
   GH_TOKEN: ${{ secrets.GH_TOKEN }}
   AUTOMERGE_BRANCHES: "master,release,develop"
