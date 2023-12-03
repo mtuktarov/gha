@@ -223,18 +223,15 @@ const getPullRequestUsers = async (prNumber) => {
     // }
 }
 
-const assignPullRequest = async (assignees) => {
+const assignPullRequest = async (prOnFailureNum, assignees) => {
     // try {
     await githubAxios.post(
-        `/repos/${OWNER_REPO}/issues/${PULL_REQUEST.number}/assignees`,
+        `/repos/${OWNER_REPO}/issues/${prOnFailureNum}/assignees`,
         { assignees: assignees }
     )
-    console.log(`PR #${PULL_REQUEST.number} assigned to ${assignees}`)
+    console.log(`PR #${prOnFailureNum} assigned to ${assignees}`)
     // } catch (error) {
-    console.error(
-        `Error assigning PR #${PULL_REQUEST.number} to ${assignees}:`,
-        error
-    )
+    console.error(`Error assigning PR #${prOnFailureNum} to ${assignees}:`)
     // }
 }
 
