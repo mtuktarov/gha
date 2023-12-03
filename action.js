@@ -349,7 +349,7 @@ async function mergePullRequest() {
     // }
 }
 const getAutomaticPRConfig = (head, base, author, onSuccess) => {
-    const prBody = labels.includes(AUTOMERGE_LABEL)
+    const prBody = PULL_REQUEST.title.includes(AUTOMERGE_LABEL)
         ? PULL_REQUEST.body.split('\n').slice(1)
         : PULL_REQUEST.body
     return {
