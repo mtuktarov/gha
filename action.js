@@ -134,8 +134,8 @@ async function createPullRequest(base, head) {
         await createBranchFrom(base, newBranchName)
         const prOnFailureNum = await createPR(newBranchName, head, false)
         await closePullRequest(prNumber)
-        const prUsers = await getPullRequestUsers(PULL_REQUEST.head.sha)
-        if (authors.length > 0) {
+        const prUsers = await getPullRequestUsers(PULL_REQUEST.number)
+        if (prUsers.length > 0) {
             await assignPullRequest(prOnFailureNum, prUsers)
         } else {
             console.log('Authors could not be found. PR will not be assigned.')
@@ -174,19 +174,25 @@ const createBranchFrom = async (branchName, newBranchName) => {
     // }
 }
 
-const getPullRequestUsers = async (head) => {
+const getPullRequestUsers = async (prNumber) => {
     // try {
     // Get the latest commit on the head branch
     const commitsResponse = await githubAxios.get(
-        `/repos/${OWNER_REPO}/commits?sha=${head}&per_page=1`
+        `/repos/${OWNER_REPO}/pulls/${prNumber}/commits`
     )
+
     const latestCommits = commitsResponse.data
     // Extract the author's GitHub username
+    console.log(
+        `latestCommits: ${latestCommits.map((commit) => commit.author.login)}`
+    )
+    console.log(`user: ${PULL_REQUEST.user}`)
 
     const authors = latestCommits
         .map((commit) => commit.author.login)
         .concat([PULL_REQUEST.merged_by, PULL_REQUEST.user])
         .filter((v, i, arr) => i !== arr.indexOf(v))
+    console.log(`authors: ${authors}`)
 
     return authors
     // } catch (error) {
