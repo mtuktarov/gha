@@ -1,32 +1,28 @@
 name: Auto Merge Workflow
 
 on:
-  pull_request:
-    types: [assigned, unassigned, labeled, unlabeled, opened, edited, closed, reopened, synchronize, ready_for_review, locked, unlocked, review_requested, review_request_removed]
-    branches:
-      - "*"
-  issues:
-    types:
-      - labeled
-          
+    pull_request:
+        types: [labeled, opened, edited, reopened]
+        branches:
+            - '*'
 
 env:
-  GH_TOKEN: ${{ secrets.GH_TOKEN }}
-  AUTOMERGE_BRANCHES: "master,release,develop"
+    GH_TOKEN: ${{ secrets.GH_TOKEN }}
+    AUTOMERGE_BRANCHES: 'master,release,develop'
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GH_TOKEN }}
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+                  token: ${{ secrets.GH_TOKEN }}
 
-      - name: Create and Merge Pull Request
-        uses: ./
-        with:
-          owner_repo: ${{ github.repository }}
+            - name: Create and Merge Pull Request
+              uses: ./
+              with:
+                  owner_repo: ${{ github.repository }}
 
-          # head: "feature/1"
-          # base: "main"
+                  # head: "feature/1"
+                  # base: "main"
