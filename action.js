@@ -78,7 +78,7 @@ async function createPullRequest(base, head) {
   await new Promise((resolve) => setTimeout(resolve, 5000));
   console.log("Pull request created:", response.html_url);
 
-  const pr = await octokit.request("GET pulls/{prNumber}", {
+  const pr = await octokit.request("GET /pulls/{prNumber}", {
     prNumber,
   });
 
