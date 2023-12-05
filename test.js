@@ -1,22 +1,50 @@
-const axios = require("axios");
+const { Octokit } = require("@octokit/core");
+const github = require("@actions/github");
 
-const { Octokit } = require("@octokit/rest");
-process.env.INPUT_OWNER_REPO = "mtuktarov/gha";
+const PULL_REQUEST = github.context.payload.pull_request;
+
 const octokit = new Octokit({
   auth: `${process.env.GITHUB_TOKEN}`,
-  baseUrl: `https://api.github.com/repos/${process.env.INPUT_OWNER_REPO}`,
+  baseUrl: `https://api.github.com/repos/mtuktarov/gha`,
   headers: {
     "X-GitHub-Api-Version": "2022-11-28",
     Accept: "application/vnd.github.v3+json",
   },
 });
-(async () => {
-  const result = await octokit.request("POST /statuses/{sha}", {
-    sha: "5f7da11d2148062b2badd7917cc3a0a81f7c653b",
-    state: "success",
-    target_url: "https://example.com/build/status",
-    description: "The build succeeded!",
-    context: "continuous-integration/jenkins",
+
+const checkIfActionIsAlreadyRunning = async () => {
+  const checkRuns = await octokit.request("GET /commits/{sha}/check-runs", {
+    sha: PULL_REQUEST.head.sha,
   });
-  console.log(result.data);
+  // For every relevant run:
+
+  for (var run of checkRuns.data.check_runs) {
+    if (run.app.slug == "github-actions") {
+      const job = await octokit.request("GET /actions/jobs/{jobId}", {
+        jobId: run.id,
+      });
+
+      // Now, get the Actions run that this job is in.
+      const actionsRun = await octokit.request("GET /actions/runs/{runId}", {
+        runId: job.data.run_id,
+      });
+      const activeWorkflowsRuns = [];
+      if (actionsRun.data.event == "pull_request") {
+        if (actionsRun.data.status != "completed") {
+          activeWorkflowsRuns.push(actionsRun.data);
+        }
+      }
+      activeWorkflowsRuns.forEach(async (run) => {
+        await octokit.request("POST /actions/runs/{runId}/cancel", {
+          runId: run.id,
+        });
+      });
+    }
+  }
+};
+
+(async () => {
+  await checkIfActionIsAlreadyRunning();
+
+  // console.log(result.data);
 })();

@@ -369,10 +369,34 @@ const checkIfActionIsAlreadyRunning = async () => {
   const checkRuns = await octokit.request("GET /commits/{sha}/check-runs", {
     sha: PULL_REQUEST.head.sha,
   });
+  // For every relevant run:
+
+  for (var run of checkRuns.data.check_runs) {
+    if (run.app.slug == "github-actions") {
+      const job = await octokit.request("GET /actions/jobs/{jobId}", {
+        jobId: run.id,
+      });
+
+      // Now, get the Actions run that this job is in.
+      const actionsRun = await octokit.request("GET /actions/runs/{runId}", {
+        runId: job.data.run_id,
+      });
+      const activeWorkflowsRuns = [];
+      if (actionsRun.data.event == "pull_request") {
+        if (actionsRun.data.status != "completed") {
+          activeWorkflowsRuns.push(actionsRun.data);
+        }
+      }
+      activeWorkflowsRuns.forEach(async (run) => {
+        await octokit.request("POST /actions/runs/{runId}/cancel", {
+          runId: run.id,
+        });
+      });
+    }
+  }
 };
 
 (async () => {
-  console.log(JSON.stringify(github, null, 2));
   await checkIfActionIsAlreadyRunning();
   const sourceBranch = PULL_REQUEST ? PULL_REQUEST.head.ref : null;
   const labels = PULL_REQUEST
