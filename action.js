@@ -16,7 +16,7 @@ const AUTOMERGE_BRANCHES = process.env.AUTOMERGE_BRANCHES;
 const AUTOMERGE_LABEL = "automerge";
 
 const octokit = new Octokit({
-  auth: `${process.env.GITHUB_TOKEN}`,
+  auth: `${process.env.GH_TOKEN}`,
   baseUrl: `https://api.github.com/repos/${github.context.payload.repository.full_name}`,
   headers: {
     "X-GitHub-Api-Version": "2022-11-28",
