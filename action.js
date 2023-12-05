@@ -373,6 +373,13 @@ const checkIfActionIsAlreadyRunning = async () => {
 
   //   for (var run of checkRuns.data.check_runs) {
   //   if (run.app.slug == "github-actions") {
+  console.log(
+    `github.context.payload: ${github.context.payload}: ${JSON.stringify(
+      github.context.payload,
+      null,
+      2
+    )}`
+  );
   const job = await octokit.request("GET /actions/jobs/{jobId}", {
     jobId: github.context.payload.runId,
   });
