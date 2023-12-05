@@ -369,6 +369,7 @@ const checkIfActionIsAlreadyRunning = async () => {
   const checkRuns = await octokit.request("GET /commits/{sha}/check-runs", {
     sha: PULL_REQUEST.head.sha,
   });
+  console.log(`checkRuns: ${JSON.stringify(checkRuns.data, null, 2)}`);
   // For every relevant run:
 
   for (var run of checkRuns.data.check_runs.filter((run) => {
