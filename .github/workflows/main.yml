@@ -24,7 +24,9 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           token: ${{ secrets.GH_TOKEN }}
       - name: Check if workflow is already running
-        run: CHECK_IF_ALREADY_RUNNING=true node actions.js
+        env:
+          CHECK_IF_ALREADY_RUNNING: true
+        uses: ./
       - name: Wait for workflows
         id: wait
         uses: ./wait-for-workflows
