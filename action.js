@@ -238,7 +238,7 @@ async function isPullRequestReadyToMerge(prNumber) {
       );
       //   requiredStatusChecks.data.contexts
       const checkRuns = await octokit.request("GET /commits/{sha}/check-runs", {
-        sha: PULL_REQUEST.sha,
+        sha: PULL_REQUEST.head.sha,
       });
       const failedCheckRuns = checkRuns.data.check_runs.filter((checkRun) => {
         checkRun.name in requiredStatusChecks ||
@@ -249,9 +249,9 @@ async function isPullRequestReadyToMerge(prNumber) {
           "All required checks succeeded. Set commit status = success"
         );
         const result = await octokit.request("POST /statuses/{sha}", {
-          sha: PULL_REQUEST.sha,
+          sha: PULL_REQUEST.head.sha,
           state: "success",
-          target_url: github.context.payload.pull_request.html_url,
+          target_url: PULL_REQUEST.html_url,
           description: "The build succeeded!",
           context: "automerge-automation",
         });
