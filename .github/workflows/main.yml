@@ -56,5 +56,3 @@ jobs:
 
       - name: Create and Merge Pull Request
         uses: ./
-        with:
-          owner_repo: ${{ github.repository }}
