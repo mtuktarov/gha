@@ -69,7 +69,7 @@ async function createPullRequest(base, head) {
   }
   const response = await createPR(base, head, author);
   // console.log(`response: ${response.data.number}`)
-  const prNumber = response.data.number;
+  const prNumber = response.number;
   await octokit.request("POST /issues/{prNumber}/labels", {
     prNumber,
     labels: [AUTOMERGE_LABEL],
