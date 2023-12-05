@@ -32,9 +32,9 @@ jobs:
         with:
           max-timeout: "900"
           polling-interval: "30"
-          exclude-workflow-names: ""
+          exclude-workflow-names: "Failure Workflow"
           exclude-workflow-ids: ""
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.GH_TOKEN }}
         env:
           DEBUG: "true"
   autoMerge:
