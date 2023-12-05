@@ -221,10 +221,7 @@ async function isPullRequestReadyToMerge(prNumber) {
 
   // Check if the PR is mergeable and not a draft
   if (prData.draft || !prData.mergeable) {
-    console.log(
-      "Pull request is not ready to merge (Draft/Merge conflicts not passed)"
-    );
-    return false;
+    throw `Pull request is not ready to merge (Draft: ${prData.draft}/Merge conflicts: ${prData.mergeable})`;
   } else if (prData.mergeable_state !== "clean") {
     if (prData.mergeable_state === "unstable") {
       console.log(
@@ -257,16 +254,11 @@ async function isPullRequestReadyToMerge(prNumber) {
         });
       } else {
         failedCheckRuns.forEach((c) => {
-          console.log(
-            `Following required checks failed:\n${html_url.join("\n")}`
-          );
+          throw `Following required checks failed:\n${html_url.join("\n")}`;
         });
-        return false;
       }
     } else {
-      console.log(
-        `Pull request is not ready to merge: mergeable_state=${prData.mergeable_state}`
-      );
+      throw `Pull request is not ready to merge: mergeable_state=${prData.mergeable_state}`;
     }
   }
 
@@ -334,6 +326,7 @@ async function mergePullRequest() {
       console.error("Failed to merge PR:", mergeResponse.data);
     }
     return mergeResponse;
+  } else {
   }
   return null;
   // } catch (error) {
