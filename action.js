@@ -30,7 +30,7 @@ async function deleteBranch(branchName) {
   });
 }
 
-const getAutomaticPRConfig = (head, base, author, failedBranch = undefined) => {
+const getAutomaticPRConfig = (head, base, author, prBodyText = undefined) => {
   let title = PULL_REQUEST.title;
   let body = PULL_REQUEST.body;
   if (PULL_REQUEST.title.includes("[automerge]")) {
@@ -42,15 +42,15 @@ const getAutomaticPRConfig = (head, base, author, failedBranch = undefined) => {
     body = matchBody[2];
   }
   return {
-    title: `[automerge][${head} -> ${failedBranch ? failedBranch : base}]${
-      failedBranch ? " FAILED " : ""
-    } ${title}`,
-    body: `Triggered by [PR ${PULL_REQUEST.number}](${PULL_REQUEST.html_url}) merge. Authored by ${author}\n\n${body}`,
+    title: `[automerge][${head} -> ${base}] ${title}`,
+    body: `Triggered by [PR ${PULL_REQUEST.number}](${
+      PULL_REQUEST.html_url
+    }) merge. Authored by ${author}\n\n${prBodyText || ""}\n\n${body}`,
   };
 };
 
-async function createPR(base, head, author, failedBranch = undefined) {
-  const titleBody = getAutomaticPRConfig(head, base, author, failedBranch);
+async function createPR(base, head, author, prBodyText = undefined) {
+  const titleBody = getAutomaticPRConfig(head, base, author, prBodyText);
   console.log(`getAutomaticPRConfig: ${JSON.stringify(titleBody, null, 2)}`);
   const { data } = await octokit.request("POST /pulls", {
     ...titleBody,
@@ -89,8 +89,24 @@ async function createPullRequest(base, head) {
     console.log(`PR ${prNumber} has merge conflicts`);
     const newBranchName = `conflict-resolution-${base}-${head}`;
     await createBranchFrom(base, newBranchName);
-    const responseOnFailure = await createPR(base, newBranchName, author);
+    const prBodyText = `Automatic merge of [PR ${pr.data.numbrt}](${pr.data.html_url}) failed. Please follow the steps below:
+    1. On your local machine checkout branch ${newBranchName}:
+        \`\`\`
+        git fetch
+        get checkout ${newBranchName}
+        \`\`\`
+    2. Merge original feature branch and resolve issues:
+        \`\`\`
+        git merge ${head}
+        \`\`\`
+    3. Push your changes and merge this PR`;
 
+    const responseOnFailure = await createPR(
+      base,
+      newBranchName,
+      author,
+      prBodyText
+    );
     const prOnFailureNum = responseOnFailure.number;
     await closePullRequest(prNumber);
     const authors = (await getPullRequestUsers(PULL_REQUEST.number))
@@ -349,8 +365,39 @@ const getNextBranchForPR = (currentBranch, allBranches) => {
     ? branchesArray[currentIndex + 1]
     : null;
 };
+const checkIfActionIsAlreadyRunning = async () => {
+  const checkRuns = await octokit.request("GET /commits/{sha}/check-runs", {
+    sha: PULL_REQUEST.head.sha,
+  });
+  // For every relevant run:
+
+  for (var run of checkRuns.data.check_runs) {
+    if (run.app.slug == "github-actions") {
+      const job = await octokit.request("GET /actions/jobs/{jobId}", {
+        jobId: run.id,
+      });
+
+      // Now, get the Actions run that this job is in.
+      const actionsRun = await octokit.request("GET /actions/runs/{runId}", {
+        runId: job.data.run_id,
+      });
+      const activeWorkflowsRuns = [];
+      if (actionsRun.data.event == "pull_request") {
+        if (actionsRun.data.status != "completed") {
+          activeWorkflowsRuns.push(actionsRun.data);
+        }
+      }
+      activeWorkflowsRuns.forEach(async (run) => {
+        await octokit.request("POST /actions/runs/{runId}/cancel", {
+          runId: run.id,
+        });
+      });
+    }
+  }
+};
 
 (async () => {
+  await checkIfActionIsAlreadyRunning();
   const sourceBranch = PULL_REQUEST ? PULL_REQUEST.head.ref : null;
   const labels = PULL_REQUEST
     ? PULL_REQUEST.labels.map((label) => label.name)
