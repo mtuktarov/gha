@@ -43,7 +43,9 @@ const getAutomaticPRConfig = (head, base, author, prBodyText = undefined) => {
   }
   return {
     title: `[automerge][${head} -> ${base}] ${title}`,
-    body: `Triggered by [PR ${PULL_REQUEST.number}](${PULL_REQUEST.html_url}) merge. Authored by ${author}\n\n${prBodyText}\n\n${body}`,
+    body: `Triggered by [PR ${PULL_REQUEST.number}](${
+      PULL_REQUEST.html_url
+    }) merge. Authored by ${author}\n\n${prBodyText || ""}\n\n${body}`,
   };
 };
 
@@ -87,7 +89,7 @@ async function createPullRequest(base, head) {
     console.log(`PR ${prNumber} has merge conflicts`);
     const newBranchName = `conflict-resolution-${base}-${head}`;
     await createBranchFrom(base, newBranchName);
-    `Automatic merge of [PR ${pr.data.numbrt}](${pr.data.html_url}) failed. Please follow the steps below:
+    const prBodyText = `Automatic merge of [PR ${pr.data.numbrt}](${pr.data.html_url}) failed. Please follow the steps below:
     1. On your local machine checkout branch ${newBranchName}:
         \`\`\`
         git fetch
@@ -99,7 +101,12 @@ async function createPullRequest(base, head) {
         \`\`\`
     3. Push your changes and merge this PR`;
 
-    const responseOnFailure = await createPR(base, newBranchName, author, "");
+    const responseOnFailure = await createPR(
+      base,
+      newBranchName,
+      author,
+      prBodyText
+    );
     const prOnFailureNum = responseOnFailure.number;
     await closePullRequest(prNumber);
     const authors = (await getPullRequestUsers(PULL_REQUEST.number))
