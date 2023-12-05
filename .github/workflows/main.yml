@@ -28,7 +28,7 @@ jobs:
           token: ${{ secrets.GH_TOKEN }}
       - name: Wait for workflows
         id: wait
-        uses: ./wait-for-workflows@feature/1
+        uses: ./wait-for-workflows
         with:
           max-timeout: "900"
           polling-interval: "30"
