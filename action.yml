@@ -1,15 +1,5 @@
 name: "Create and Merge Pull Request"
 description: "Creates and merges a pull request"
-inputs:
-  owner_repo:
-    description: "Owner and repository name"
-    required: true
-  headBranch:
-    description: "The name of the head branch"
-    required: true
-  baseBranch:
-    description: "The name of the base branch"
-    required: true
 runs:
   using: "node20"
   main: "action.js"

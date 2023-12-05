@@ -17,5 +17,5 @@ jobs:
 
       - name: Clean install dependencies and build
         run: |
-          sleep 120
+          sleep 10
           false

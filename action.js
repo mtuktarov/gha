@@ -1,6 +1,6 @@
 const { execSync } = require("child_process");
 // try {
-execSync("npm install axios @actions/github", {
+execSync("npm install @octokit/core @actions/github", {
   stdio: "inherit",
 });
 // }
@@ -8,84 +8,26 @@ execSync("npm install axios @actions/github", {
 // console.error('Failed to install dependencies:', error)
 // }
 
-const axios = require("axios");
+const { Octokit } = require("@octokit/core");
 const github = require("@actions/github");
-
-const OWNER_REPO = process.env.INPUT_OWNER_REPO;
-
-const githubAxios = axios.create({
-  baseURL: "https://api.github.com/",
-  headers: {
-    Authorization: `token ${process.env.GH_TOKEN}`,
-    Accept: "application/vnd.github.v3+json",
-  },
-});
 
 const PULL_REQUEST = github.context.payload.pull_request;
 const AUTOMERGE_BRANCHES = process.env.AUTOMERGE_BRANCHES;
 const AUTOMERGE_LABEL = "automerge";
 
-function handleCatch(message, error) {
-  if (error.response) {
-    console.error(message, " Error data: ", error.response.data);
-    console.error(message, " Error status: ", error.response.status);
-  } else if (error.request) {
-    console.error(message, " Error request: ", error.request);
-  } else {
-    console.error(message, " Error message: ", error.message);
-  }
-}
-
-async function getGitRevListCount() {
-  const command = "git rev-list --count --all";
-  const result = await executeCommand(command);
-
-  if (result.stderr) {
-    console.error("Error executing git command:", result.stderr);
-    throw new Error(result.stderr); // Throw an Error object with the stderr message
-  }
-
-  return result.stdout; // Return the stdout which contains the count
-}
+const octokit = new Octokit({
+  auth: `${process.env.GITHUB_TOKEN}`,
+  baseUrl: `https://api.github.com/repos/${github.context.payload.repository.full_name}`,
+  headers: {
+    "X-GitHub-Api-Version": "2022-11-28",
+    Accept: "application/vnd.github.v3+json",
+  },
+});
 
 async function deleteBranch(branchName) {
-  // try {
-  await githubAxios.delete(`/repos/${OWNER_REPO}/git/refs/heads/${branchName}`);
-  console.log(`Branch deleted: ${branchName}`);
-  // } catch (error) {
-  //     console.error('Error deleting branch:', error)
-  // }
-}
-
-async function createBranch(branchName, baseBranch) {
-  // try {
-  // Check if the branch already exists
-  if (await branchExists(branchName)) {
-    // If it exists, delete it
-    await deleteBranch(branchName);
-  }
-  // Get the SHA of the latest commit on the base branch
-  const { data: refData } = await githubAxios.get(
-    `/repos/${OWNER_REPO}/git/ref/heads/${baseBranch}`
-  );
-
-  const sha = refData.object.sha;
-
-  // Create a new branch
-  const { data: newBranch } = await githubAxios.post(
-    `/repos/${OWNER_REPO}/git/refs`,
-    {
-      ref: `refs/heads/${branchName}`,
-      sha,
-    }
-  );
-
-  console.log(`Branch created: ${branchName}`);
-  return newBranch.ref;
-  // } catch (error) {
-  //     handleCatch('Error creating branch:', error)
-  //     throw ('Error creating branch:', error)
-  // }
+  await octokit.request("DELETE /git/refs/heads/{branchName}", {
+    branchName,
+  });
 }
 
 const getAutomaticPRConfig = (head, base, author, failedBranch = undefined) => {
@@ -110,22 +52,13 @@ const getAutomaticPRConfig = (head, base, author, failedBranch = undefined) => {
 async function createPR(base, head, author, failedBranch = undefined) {
   const titleBody = getAutomaticPRConfig(head, base, author, failedBranch);
   console.log(`getAutomaticPRConfig: ${JSON.stringify(titleBody, null, 2)}`);
-  return await axios.post(
-    `https://api.github.com/repos/${OWNER_REPO}/pulls`,
-    {
-      ...titleBody,
-      head: head,
-      base: base,
-      maintainer_can_modify: true,
-    },
-    {
-      headers: {
-        Authorization: `token ${process.env.GH_TOKEN}`,
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-    }
-  );
+  const { data } = await octokit.request("POST /pulls", {
+    ...titleBody,
+    head: head,
+    base: base,
+    maintainer_can_modify: true,
+  });
+  return data;
 }
 async function createPullRequest(base, head) {
   let author = PULL_REQUEST.user.login;
@@ -137,15 +70,17 @@ async function createPullRequest(base, head) {
   const response = await createPR(base, head, author);
   // console.log(`response: ${response.data.number}`)
   const prNumber = response.data.number;
-
-  await githubAxios.post(`/repos/${OWNER_REPO}/issues/${prNumber}/labels`, {
+  await octokit.request("POST /issues/{prNumber}/labels", {
+    prNumber,
     labels: [AUTOMERGE_LABEL],
   });
 
   await new Promise((resolve) => setTimeout(resolve, 5000));
   console.log("Pull request created:", response.data.html_url);
 
-  const pr = await githubAxios.get(`/repos/${OWNER_REPO}/pulls/${prNumber}`);
+  const pr = await octokit.request("GET pulls/{prNumber}", {
+    prNumber,
+  });
 
   // if conflicts then we close created PR and open a new one
   // with original feature branch merging into a new branch created from target branch
@@ -179,25 +114,18 @@ async function createPullRequest(base, head) {
 }
 
 const createBranchFrom = async (branchName, newBranchName) => {
-  // const githubAxios = axios.create({
-  //     baseURL: 'https://api.github.com/',
-  //     headers: {
-  //         Authorization: `token ${process.env.GITHUB_TOKEN}`,
-  //         Accept: 'application/vnd.github.v3+json',
-  //     },
-  // })
-
   const branchRef = `refs/heads/${branchName}`;
 
   try {
     // Get the commit SHA of the existing branch
-    const branchData = await githubAxios.get(
-      `/repos/${OWNER_REPO}/git/${branchRef}`
-    );
+    const branchData = await octokit.request("GET /git/{branchRef}", {
+      branchRef,
+    });
+
     const sha = branchData.data.object.sha;
 
     // Create a new branch reference pointing to the same commit SHA
-    await githubAxios.post(`/repos/${OWNER_REPO}/git/refs`, {
+    await octokit.request("POST /git/refs", {
       ref: `refs/heads/${newBranchName}`,
       sha: sha,
     });
@@ -205,29 +133,23 @@ const createBranchFrom = async (branchName, newBranchName) => {
     console.log(`Branch created: ${newBranchName}`);
 
     // Get the tree SHA using the commit SHA
-    const commitData = await githubAxios.get(
-      `/repos/${OWNER_REPO}/git/commits/${sha}`
-    );
+    const commitData = await octokit.request("GET /git/commits/{sha}", {
+      sha,
+    });
     const treeSha = commitData.data.tree.sha;
 
     // Create a new commit using the tree SHA
-    const newCommitData = await githubAxios.post(
-      `/repos/${OWNER_REPO}/git/commits`,
-      {
-        message: "This is an empty commit",
-        tree: treeSha,
-        parents: [sha],
-      }
-    );
+    const newCommitData = await octokit.request("POST /git/commits", {
+      message: "This is an empty commit",
+      tree: treeSha,
+      parents: [sha],
+    });
 
     // Update the branch to point to the new commit
-    await githubAxios.patch(
-      `/repos/${OWNER_REPO}/git/refs/heads/${newBranchName}`,
-      {
-        sha: newCommitData.data.sha,
-      }
-    );
-
+    await octokit.request("PATCH /git/refs/heads/{newBranchName}", {
+      newBranchName,
+      sha: newCommitData.data.sha,
+    });
     console.log(
       `Empty commit created on the new branch: ${newCommitData.data.sha}`
     );
@@ -243,9 +165,13 @@ const createBranchFrom = async (branchName, newBranchName) => {
 const getPullRequestUsers = async (prNumber) => {
   // try {
   // Get the latest commit on the head branch
-  const commitsResponse = await githubAxios.get(
-    `/repos/${OWNER_REPO}/pulls/${prNumber}/commits`
+  const commitsResponse = await octokit.request(
+    "GET /pulls/{prNumber}/commits",
+    {
+      prNumber,
+    }
   );
+
   // Extract the author's GitHub username
   const authors = commitsResponse.data.map((commit) => commit.author.login);
   console.log(`authors: ${authors}`);
@@ -259,10 +185,11 @@ const getPullRequestUsers = async (prNumber) => {
 
 const assignPullRequest = async (prOnFailureNum, assignees) => {
   // try {
-  await githubAxios.post(
-    `/repos/${OWNER_REPO}/issues/${prOnFailureNum}/assignees`,
-    { assignees: assignees }
-  );
+  await octokit.request("POST /issues/{prOnFailureNum}/assignees", {
+    prOnFailureNum,
+    assignees,
+  });
+
   console.log(`PR #${prOnFailureNum} assigned to ${assignees}`);
   // } catch (error) {
   // console.error(`Error assigning PR #${prOnFailureNum} to ${assignees}:`)
@@ -271,7 +198,8 @@ const assignPullRequest = async (prOnFailureNum, assignees) => {
 
 const closePullRequest = async (prNumber) => {
   // try {
-  await githubAxios.patch(`/repos/${OWNER_REPO}/pulls/${prNumber}`, {
+  await octokit.request("POST /pulls/{prNumber}", {
+    prNumber,
     state: "closed",
   });
 
@@ -281,26 +209,32 @@ const closePullRequest = async (prNumber) => {
   // }
 };
 
-async function isPullRequestReadyToMerge(pullNumber) {
+async function isPullRequestReadyToMerge(prNumber) {
   //   return true;
   // try {
   // Get pull request information
-  const prResponse = await githubAxios.get(
-    `/repos/${OWNER_REPO}/pulls/${pullNumber}`
-  );
+  const prResponse = await octokit.request("GET /pulls/{prNumber}", {
+    prNumber,
+  });
+
   const prData = prResponse.data;
 
   // Check if the PR is mergeable and not a draft
-  if (prData.draft || prData.mergeable_state !== "clean" || !prData.mergeable) {
+  if (prData.draft || !prData.mergeable) {
     console.log(
-      "Pull request is not ready to merge (Draft/Merge conflicts/Checks not passed)"
+      "Pull request is not ready to merge (Draft/Merge conflicts not passed)"
     );
     return false;
+  } else if (prData.mergeable_state !== "clean") {
+    console.log("Pull request is not ready to merge (Checks not passed)");
   }
 
   // Get reviews for the pull request
-  const reviewsResponse = await githubAxios.get(
-    `/${OWNER_REPO}/pulls/${pullNumber}/reviews`
+  const reviewsResponse = await octokit.request(
+    "GET /pulls/{prNumber}/reviews",
+    {
+      prNumber,
+    }
   );
   const reviewsData = reviewsResponse.data;
 
@@ -316,9 +250,13 @@ async function isPullRequestReadyToMerge(pullNumber) {
   }
 
   // Get the combined status for the head commit of the PR
-  const statusResponse = await githubAxios.get(
-    `/${OWNER_REPO}/commits/${prData.head.sha}/status`
+  const statusResponse = await octokit.request(
+    "GET /commits/{commitSha}/status",
+    {
+      commitSha: prData.head.sha,
+    }
   );
+
   const statusData = statusResponse.data;
 
   // Check for successful status checks
@@ -343,14 +281,12 @@ async function mergePullRequest() {
   // try {
   // await isPullRequestReadyToMerge(PULL_REQUEST.number)
   if (await isPullRequestReadyToMerge(PULL_REQUEST.number)) {
-    const mergeResponse = await githubAxios.put(
-      `/repos/${OWNER_REPO}/pulls/${PULL_REQUEST.number}/merge`,
-      {
-        commit_title: `Automerge PR #${PULL_REQUEST.number}`,
-        commit_message: "Automatically merged by GitHub Actions",
-        merge_method: "merge",
-      }
-    );
+    const mergeResponse = await octokit.request("PUT /pulls/{prNumber}/merge", {
+      prNumber: PULL_REQUEST.number,
+      commit_title: `Automerge PR #${PULL_REQUEST.number}`,
+      commit_message: "Automatically merged by GitHub Actions",
+      merge_method: "merge",
+    });
     if (mergeResponse.status === 200) {
       console.log(`Successfully merged PR #${PULL_REQUEST.number}`);
     } else {
@@ -399,3 +335,57 @@ const getNextBranchForPR = (currentBranch, allBranches) => {
     console.log("PR does not have the automerge label. Skipping action.");
   }
 })();
+
+// function handleCatch(message, error) {
+//   if (error.response) {
+//     console.error(message, " Error data: ", error.response.data);
+//     console.error(message, " Error status: ", error.response.status);
+//   } else if (error.request) {
+//     console.error(message, " Error request: ", error.request);
+//   } else {
+//     console.error(message, " Error message: ", error.message);
+//   }
+// }
+
+// async function getGitRevListCount() {
+//   const command = "git rev-list --count --all";
+//   const result = await executeCommand(command);
+
+//   if (result.stderr) {
+//     console.error("Error executing git command:", result.stderr);
+//     throw new Error(result.stderr); // Throw an Error object with the stderr message
+//   }
+
+//   return result.stdout; // Return the stdout which contains the count
+// }
+
+// async function createBranch(branchName, baseBranch) {
+//   // try {
+//   // Check if the branch already exists
+//   if (await branchExists(branchName)) {
+//     // If it exists, delete it
+//     await deleteBranch(branchName);
+//   }
+//   // Get the SHA of the latest commit on the base branch
+//   const { data: refData } = await githubAxios.get(
+//     `/repos/${OWNER_REPO}/git/ref/heads/${baseBranch}`
+//   );
+
+//   const sha = refData.object.sha;
+
+//   // Create a new branch
+//   const { data: newBranch } = await githubAxios.post(
+//     `/repos/${OWNER_REPO}/git/refs`,
+//     {
+//       ref: `refs/heads/${branchName}`,
+//       sha,
+//     }
+//   );
+
+//   console.log(`Branch created: ${branchName}`);
+//   return newBranch.ref;
+//   // } catch (error) {
+//   //     handleCatch('Error creating branch:', error)
+//   //     throw ('Error creating branch:', error)
+//   // }
+// }
