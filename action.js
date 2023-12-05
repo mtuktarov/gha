@@ -76,7 +76,7 @@ async function createPullRequest(base, head) {
   });
 
   await new Promise((resolve) => setTimeout(resolve, 5000));
-  console.log("Pull request created:", response.data.html_url);
+  console.log("Pull request created:", response.html_url);
 
   const pr = await octokit.request("GET pulls/{prNumber}", {
     prNumber,
@@ -91,7 +91,7 @@ async function createPullRequest(base, head) {
     await createBranchFrom(base, newBranchName);
     const responseOnFailure = await createPR(base, newBranchName, author);
 
-    const prOnFailureNum = responseOnFailure.data.number;
+    const prOnFailureNum = responseOnFailure.number;
     await closePullRequest(prNumber);
     const authors = (await getPullRequestUsers(PULL_REQUEST.number))
       .concat([author])
