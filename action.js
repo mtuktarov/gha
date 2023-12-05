@@ -365,8 +365,15 @@ const getNextBranchForPR = (currentBranch, allBranches) => {
     ? branchesArray[currentIndex + 1]
     : null;
 };
+const checkIfActionIsAlreadyRunning = async () => {
+  const checkRuns = await octokit.request("GET /commits/{sha}/check-runs", {
+    sha: PULL_REQUEST.head.sha,
+  });
+};
 
 (async () => {
+  console.log(JSON.stringify(github, null, 2));
+  await checkIfActionIsAlreadyRunning();
   const sourceBranch = PULL_REQUEST ? PULL_REQUEST.head.ref : null;
   const labels = PULL_REQUEST
     ? PULL_REQUEST.labels.map((label) => label.name)
