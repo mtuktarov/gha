@@ -257,6 +257,13 @@ async function isPullRequestReadyToMerge(prNumber) {
           throw `Following required checks failed:\n${html_url.join("\n")}`;
         });
       }
+    } else if (
+      prData.mergeable_state === "blocked" &&
+      PULL_REQUEST.title.startsWith("[automerge]")
+    ) {
+      console.log(
+        "The mergeable_state is expected to be blocked in automatically created pull request"
+      );
     } else {
       throw `Pull request is not ready to merge: mergeable_state=${prData.mergeable_state}`;
     }
