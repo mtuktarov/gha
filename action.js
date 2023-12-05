@@ -366,50 +366,49 @@ const getNextBranchForPR = (currentBranch, allBranches) => {
     : null;
 };
 const checkIfActionIsAlreadyRunning = async () => {
-  //   const checkRuns = await octokit.request("GET /commits/{sha}/check-runs", {
-  //     sha: PULL_REQUEST.head.sha,
-  //   });
+  const checkRuns = await octokit.request("GET /commits/{sha}/check-runs", {
+    sha: PULL_REQUEST.head.sha,
+  }).data;
   // For every relevant run:
 
-  //   for (var run of checkRuns.data.check_runs) {
-  //   if (run.app.slug == "github-actions") {
-  console.log(
-    `github.context.payload: ${github.context.payload}: ${JSON.stringify(
-      github.context,
-      null,
-      2
-    )}`
-  );
-  const job = await octokit.request("GET /actions/jobs/{jobId}", {
-    jobId: github.context.payload.runId,
-  });
-
-  console.log(
-    `github.context.payload.runId: ${
-      github.context.payload.runId
-    }: ${JSON.stringify(job.data, null, 2)}`
-  );
-
-  // Now, get the Actions run that this job is in.
-  const actionsRun = await octokit.request("GET /actions/runs/{runId}", {
-    runId: job.data.run_id,
-  });
-  console.log(`actionsRun: ${JSON.stringify(actionsRun.data, null, 2)}`);
-
-  if (actionsRun.data.event == "pull_request") {
-    if (actionsRun.data.status != "completed") {
-      activeWorkflowsRuns.forEach(async (run) => {
-        const cancelData = await octokit.request(
-          "POST /actions/runs/{runId}/cancel",
-          {
-            runId: run.id,
-          }
-        );
-        console.log(`cancel: ${JSON.stringify(cancelData.data, null, 2)}`);
+  for (var run of checkRuns.data.check_runs.filter((run) => {
+    run.details_url.includes(github.context.runId);
+  })) {
+    if (run.app.slug == "github-actions") {
+      console.log(
+        `github.context.payload: ${github.context.payload}: ${JSON.stringify(
+          github.context,
+          null,
+          2
+        )}`
+      );
+      const job = await octokit.request("GET /actions/jobs/{jobId}", {
+        jobId: run.id,
       });
+
+      console.log(`job: ${JSON.stringify(job.data, null, 2)}`);
+
+      // Now, get the Actions run that this job is in.
+      const actionsRun = await octokit.request("GET /actions/runs/{runId}", {
+        runId: github.context.runId,
+      });
+      console.log(`actionsRun: ${JSON.stringify(actionsRun.data, null, 2)}`);
+
+      if (actionsRun.data.event == "pull_request") {
+        if (actionsRun.data.status != "completed") {
+          activeWorkflowsRuns.forEach(async (run) => {
+            const cancelData = await octokit.request(
+              "POST /actions/runs/{runId}/cancel",
+              {
+                runId: run.id,
+              }
+            );
+            console.log(`cancel: ${JSON.stringify(cancelData.data, null, 2)}`);
+          });
+        }
+      }
     }
   }
-
   //   }
 };
 // };
