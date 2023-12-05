@@ -226,7 +226,48 @@ async function isPullRequestReadyToMerge(prNumber) {
     );
     return false;
   } else if (prData.mergeable_state !== "clean") {
-    console.log("Pull request is not ready to merge (Checks not passed)");
+    if (prData.mergeable_state === "unstable") {
+      console.log(
+        "The mergeable_state is unstable. Checking if all required checks succeeded."
+      );
+      const requiredStatusChecks = await octokit.request(
+        "GET /branches/{base}/protection/required_status_checks",
+        {
+          base: PULL_REQUEST.base.ref,
+        }
+      );
+      //   requiredStatusChecks.data.contexts
+      const checkRuns = await octokit.request("GET /commits/{sha}/check-runs", {
+        sha: PULL_REQUEST.sha,
+      });
+      const failedCheckRuns = checkRuns.data.check_runs.filter((checkRun) => {
+        checkRun.name in requiredStatusChecks ||
+          checkRun.conclusion === "success";
+      });
+      if (!failedCheckRuns.length) {
+        console.log(
+          "All required checks succeeded. Set commit status = success"
+        );
+        const result = await octokit.request("POST /statuses/{sha}", {
+          sha: PULL_REQUEST.sha,
+          state: "success",
+          target_url: github.context.payload.pull_request.html_url,
+          description: "The build succeeded!",
+          context: "automerge-automation",
+        });
+      } else {
+        failedCheckRuns.forEach((c) => {
+          console.log(
+            `Following required checks failed:\n${html_url.join("\n")}`
+          );
+        });
+        return false;
+      }
+    } else {
+      console.log(
+        `Pull request is not ready to merge: mergeable_state=${prData.mergeable_state}`
+      );
+    }
   }
 
   // Get reviews for the pull request
