@@ -1,28 +1,33 @@
 name: Auto Merge Workflow
 
 on:
-    pull_request:
-        types: [labeled, reopened]
-        branches:
-            - '*'
+  pull_request:
+    types: [labeled, reopened]
+    branches:
+      - "*"
 
 env:
-    GH_TOKEN: ${{ secrets.GH_TOKEN }}
-    AUTOMERGE_BRANCHES: 'master,release,develop'
+  GH_TOKEN: ${{ secrets.GH_TOKEN }}
+  AUTOMERGE_BRANCHES: "master,release,develop"
 jobs:
-    build:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v4
-              with:
-                  fetch-depth: 0
-                  token: ${{ secrets.GH_TOKEN }}
+  printJob:
+    name: Print event
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dump GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: |
+          echo "$GITHUB_CONTEXT"
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_TOKEN }}
 
-            - name: Create and Merge Pull Request
-              uses: ./
-              with:
-                  owner_repo: ${{ github.repository }}
-
-                  # head: "feature/1"
-                  # base: "main"
+      - name: Create and Merge Pull Request
+        uses: ./
+        with:
+          owner_repo: ${{ github.repository }}
