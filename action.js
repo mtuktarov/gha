@@ -116,50 +116,50 @@ async function createPullRequest(base, head) {
 const createBranchFrom = async (branchName, newBranchName) => {
   const branchRef = `refs/heads/${branchName}`;
 
-  try {
-    // Get the commit SHA of the existing branch
-    const branchData = await octokit.request("GET /git/{branchRef}", {
-      branchRef,
-    });
+  //   try {
+  // Get the commit SHA of the existing branch
+  const branchData = await octokit.request("GET /git/{branchRef}", {
+    branchRef,
+  });
 
-    const sha = branchData.data.object.sha;
+  const sha = branchData.data.object.sha;
 
-    // Create a new branch reference pointing to the same commit SHA
-    await octokit.request("POST /git/refs", {
-      ref: `refs/heads/${newBranchName}`,
-      sha: sha,
-    });
+  // Create a new branch reference pointing to the same commit SHA
+  await octokit.request("POST /git/refs", {
+    ref: `refs/heads/${newBranchName}`,
+    sha: sha,
+  });
 
-    console.log(`Branch created: ${newBranchName}`);
+  console.log(`Branch created: ${newBranchName}`);
 
-    // Get the tree SHA using the commit SHA
-    const commitData = await octokit.request("GET /git/commits/{sha}", {
-      sha,
-    });
-    const treeSha = commitData.data.tree.sha;
+  // Get the tree SHA using the commit SHA
+  const commitData = await octokit.request("GET /git/commits/{sha}", {
+    sha,
+  });
+  const treeSha = commitData.data.tree.sha;
 
-    // Create a new commit using the tree SHA
-    const newCommitData = await octokit.request("POST /git/commits", {
-      message: "This is an empty commit",
-      tree: treeSha,
-      parents: [sha],
-    });
+  // Create a new commit using the tree SHA
+  const newCommitData = await octokit.request("POST /git/commits", {
+    message: "This is an empty commit",
+    tree: treeSha,
+    parents: [sha],
+  });
 
-    // Update the branch to point to the new commit
-    await octokit.request("PATCH /git/refs/heads/{newBranchName}", {
-      newBranchName,
-      sha: newCommitData.data.sha,
-    });
-    console.log(
-      `Empty commit created on the new branch: ${newCommitData.data.sha}`
-    );
-  } catch (error) {
-    console.error(`Error: ${error.message}`);
-    console.log("Request Config:", error.config);
-    if (error.response) {
-      console.log("Error Response:", error.response.data);
-    }
-  }
+  // Update the branch to point to the new commit
+  await octokit.request("PATCH /git/refs/heads/{newBranchName}", {
+    newBranchName,
+    sha: newCommitData.data.sha,
+  });
+  console.log(
+    `Empty commit created on the new branch: ${newCommitData.data.sha}`
+  );
+  //   } catch (error) {
+  //     console.error(`Error: ${error.message}`);
+  //     console.log("Request Config:", error.config);
+  //     if (error.response) {
+  //       console.log("Error Response:", error.response.data);
+  //     }
+  //   }
 };
 
 const getPullRequestUsers = async (prNumber) => {
