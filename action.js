@@ -78,7 +78,7 @@ async function createPullRequest(base, head) {
   await new Promise((resolve) => setTimeout(resolve, 5000));
   console.log("Pull request created:", response.html_url);
 
-  const pr = await octokit.request("GET pulls/{prNumber}", {
+  const pr = await octokit.request("GET /pulls/{prNumber}", {
     prNumber,
   });
 
@@ -262,24 +262,26 @@ async function isPullRequestReadyToMerge(prNumber) {
     }
   }
 
-  // Get reviews for the pull request
-  const reviewsResponse = await octokit.request(
-    "GET /pulls/{prNumber}/reviews",
-    {
-      prNumber,
+  if (!PULL_REQUEST.title.startsWith("[automerge]")) {
+    // Get reviews for the pull request
+    const reviewsResponse = await octokit.request(
+      "GET /pulls/{prNumber}/reviews",
+      {
+        prNumber,
+      }
+    );
+    const reviewsData = reviewsResponse.data;
+
+    // Check for at least one approved review and no changes requested
+    const changesRequested = reviewsData.some(
+      (review) => review.state === "CHANGES_REQUESTED"
+    );
+    const approved = reviewsData.some((review) => review.state === "APPROVED");
+
+    if (changesRequested || !approved) {
+      console.log("Pull request does not have the necessary reviews");
+      return false;
     }
-  );
-  const reviewsData = reviewsResponse.data;
-
-  // Check for at least one approved review and no changes requested
-  const changesRequested = reviewsData.some(
-    (review) => review.state === "CHANGES_REQUESTED"
-  );
-  const approved = reviewsData.some((review) => review.state === "APPROVED");
-
-  if (changesRequested || !approved) {
-    console.log("Pull request does not have the necessary reviews");
-    return false;
   }
 
   // Get the combined status for the head commit of the PR
