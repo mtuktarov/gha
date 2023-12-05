@@ -114,12 +114,10 @@ async function createPullRequest(base, head) {
 }
 
 const createBranchFrom = async (branchName, newBranchName) => {
-  const branchRef = `refs/heads/${branchName}`;
-
   //   try {
   // Get the commit SHA of the existing branch
-  const branchData = await octokit.request("GET /git/{branchRef}", {
-    branchRef,
+  const branchData = await octokit.request("GET /git/refs/heads/{branchName}", {
+    branchName,
   });
 
   const sha = branchData.data.object.sha;
@@ -259,7 +257,7 @@ async function isPullRequestReadyToMerge(prNumber) {
       }
     } else if (
       prData.mergeable_state === "blocked" &&
-      PULL_REQUEST.title.startsWith("[automerge]")
+      prData.title.startsWith("[automerge]")
     ) {
       console.log(
         "The mergeable_state is expected to be blocked in automatically created pull request"
@@ -269,7 +267,7 @@ async function isPullRequestReadyToMerge(prNumber) {
     }
   }
 
-  if (!PULL_REQUEST.title.startsWith("[automerge]")) {
+  if (!prData.title.startsWith("[automerge]")) {
     // Get reviews for the pull request
     const reviewsResponse = await octokit.request(
       "GET /pulls/{prNumber}/reviews",
