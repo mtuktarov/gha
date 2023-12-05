@@ -8,24 +8,50 @@ on:
 
 env:
   GH_TOKEN: ${{ secrets.GH_TOKEN }}
+  DEBUG: "true"
   AUTOMERGE_BRANCHES: "master,release,develop"
 jobs:
-  printJob:
-    name: Print event
+  waitForWorkflows:
+    name: Wait for workflows
     runs-on: ubuntu-latest
+    if: always()
     steps:
       - name: Dump GitHub context
         env:
           GITHUB_CONTEXT: ${{ toJson(github) }}
         run: |
           echo "$GITHUB_CONTEXT"
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Wait for workflows
+        id: wait
+        uses: smartcontractkit/chainlink-github-actions/utils/wait-for-workflows@main
+        with:
+          max-timeout: "900"
+          polling-interval: "30"
+          exclude-workflow-names: "Test Workflow"
+          exclude-workflow-ids: ""
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          DEBUG: "true"
   build:
     runs-on: ubuntu-latest
+    needs: [waitForWorkflows]
+    if: always()
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
+      - name: Check needs results
+        if: needs.waitForWorkflows.result != 'success'
+        run: exit 1
+
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GH_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create and Merge Pull Request
         uses: ./
