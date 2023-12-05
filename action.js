@@ -397,30 +397,33 @@ const checkIfActionIsAlreadyRunning = async () => {
 };
 
 (async () => {
-  await checkIfActionIsAlreadyRunning();
-  const sourceBranch = PULL_REQUEST ? PULL_REQUEST.head.ref : null;
-  const labels = PULL_REQUEST
-    ? PULL_REQUEST.labels.map((label) => label.name)
-    : [];
-
-  if (labels.includes(AUTOMERGE_LABEL)) {
-    const prMergeResult = await mergePullRequest();
-    if (prMergeResult) {
-      const nextBranch = getNextBranchForPR(
-        PULL_REQUEST.base.ref,
-        AUTOMERGE_BRANCHES
-      );
-      // If you want to delete the branch after merging
-      ("Pull request was created ");
-
-      if (nextBranch === null) {
-        await deleteBranch(sourceBranch);
-      } else {
-        const pullRequest = await createPullRequest(nextBranch, sourceBranch);
-      }
-    }
+  if (process.env.CHECK_IF_ALREADY_RUNNING) {
+    await checkIfActionIsAlreadyRunning();
   } else {
-    console.log("PR does not have the automerge label. Skipping action.");
+    const sourceBranch = PULL_REQUEST ? PULL_REQUEST.head.ref : null;
+    const labels = PULL_REQUEST
+      ? PULL_REQUEST.labels.map((label) => label.name)
+      : [];
+
+    if (labels.includes(AUTOMERGE_LABEL)) {
+      const prMergeResult = await mergePullRequest();
+      if (prMergeResult) {
+        const nextBranch = getNextBranchForPR(
+          PULL_REQUEST.base.ref,
+          AUTOMERGE_BRANCHES
+        );
+        // If you want to delete the branch after merging
+        ("Pull request was created ");
+
+        if (nextBranch === null) {
+          await deleteBranch(sourceBranch);
+        } else {
+          const pullRequest = await createPullRequest(nextBranch, sourceBranch);
+        }
+      }
+    } else {
+      console.log("PR does not have the automerge label. Skipping action.");
+    }
   }
 })();
 

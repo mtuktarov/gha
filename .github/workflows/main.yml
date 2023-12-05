@@ -18,16 +18,13 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     steps:
-      - name: Dump GitHub context
-        env:
-          GITHUB_CONTEXT: ${{ toJson(github) }}
-        run: |
-          echo "$GITHUB_CONTEXT"
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           token: ${{ secrets.GH_TOKEN }}
+      - name: Check if workflow is already running
+        run: CHECK_IF_ALREADY_RUNNING=true node actions.js
       - name: Wait for workflows
         id: wait
         uses: ./wait-for-workflows
