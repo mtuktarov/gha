@@ -2,7 +2,7 @@ name: Test Workflow
 
 on:
   pull_request:
-    types: [labeled, reopened]
+    types: [labeled, reopened, opened, synchronize, reopened]
     branches:
       - "*"
 
