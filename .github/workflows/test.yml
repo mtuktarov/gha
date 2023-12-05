@@ -1,0 +1,29 @@
+name: Test Workflow
+
+on:
+  pull_request:
+    types: [labeled, reopened]
+    branches:
+      - "*"
+
+jobs:
+  printJob:
+    name: Print event
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dump GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: |
+          echo "$GITHUB_CONTEXT"
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Clean install dependencies and build
+        run: |
+          sleep 60
