@@ -7,15 +7,6 @@ on:
       - "*"
 
 jobs:
-  printJob:
-    name: Print event
-    runs-on: ubuntu-latest
-    steps:
-      - name: Dump GitHub context
-        env:
-          GITHUB_CONTEXT: ${{ toJson(github) }}
-        run: |
-          echo "$GITHUB_CONTEXT"
   build:
     runs-on: ubuntu-latest
     steps:
@@ -26,5 +17,5 @@ jobs:
 
       - name: Clean install dependencies and build
         run: |
-          sleep 60
+          sleep 120
           false

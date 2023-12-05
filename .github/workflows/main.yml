@@ -27,16 +27,16 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
       - name: Wait for workflows
         id: wait
-        uses: smartcontractkit/chainlink-github-actions/utils/wait-for-workflows@main
+        uses: ./wait-for-workflows@feature/1
         with:
           max-timeout: "900"
           polling-interval: "30"
-          exclude-workflow-names: "Test Workflow"
+          exclude-workflow-names: ""
           exclude-workflow-ids: ""
           github-token: ${{ secrets.GITHUB_TOKEN }}
         env:
           DEBUG: "true"
-  build:
+  autoMerge:
     runs-on: ubuntu-latest
     needs: [waitForWorkflows]
     if: always()
