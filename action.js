@@ -375,7 +375,7 @@ const checkIfActionIsAlreadyRunning = async () => {
   //   if (run.app.slug == "github-actions") {
   console.log(
     `github.context.payload: ${github.context.payload}: ${JSON.stringify(
-      github.context.payload,
+      github.context,
       null,
       2
     )}`
